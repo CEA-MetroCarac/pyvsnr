@@ -13,7 +13,8 @@ the 2D-VSNR algorithm.
 
 ## Requirements
 
-For CPU execution, the vsnr algorithm requires only ![numpy](https://numpy.org).
+For CPU execution, the vsnr algorithm requires only the
+![numpy](https://numpy.org/) package.
 
 For GPU execution, the ![cupy](https://cupy.dev) library is used.
 Follow the ![installaton instructions](https://docs.cupy.dev/en/stable/install.html)
