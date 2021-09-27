@@ -1,4 +1,4 @@
-# VSNR
+# pyVSNR
 
 ![](examples/data/fib_sem_result.png)
 
