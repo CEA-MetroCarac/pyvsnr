@@ -4,8 +4,8 @@
 
 ## Description
 
-This repository contains the sources of the CPU/GPU based denoising codes of
-the 2D-VSNR algorithm.
+This repository contains the sources of the 2D-CPU/GPU based denoising codes of
+ the VSNR algorithm.
  
 ## Installation
 
@@ -14,14 +14,14 @@ the 2D-VSNR algorithm.
 ## Requirements
 
 For CPU execution, the vsnr algorithm requires only the
-![numpy](https://numpy.org/) package.
+[numpy](https://numpy.org/) package.
 
-For GPU execution, the ![cupy](https://cupy.dev) library is used.
-Follow the ![installaton instructions](https://docs.cupy.dev/en/stable/install.html)
+For GPU execution, the [cupy](https://cupy.dev) library is required.
+Follow the [installaton instructions](https://docs.cupy.dev/en/stable/install.html)
 for more details.
 
-To run the ![examples](https://github.com/patquem/pyvsnr/tree/main/examples/examples.py)
-, the following additional packages have to be installed:
+To run the [examples](https://github.com/patquem/pyvsnr/tree/main/examples/examples.py)
+, additional packages have to be installed :
 
 - os
 - time
@@ -30,13 +30,13 @@ To run the ![examples](https://github.com/patquem/pyvsnr/tree/main/examples/exam
 
 ## Usage
 
-For a single image treatment:
+For a single image processing :
 
 ```python
 from pyvsnr import VSNR
 from skimage import io
 
-# read image to correct
+# read the image to correct
 img = io.imread('my_image.tif')
 
 # vsnr object creation
@@ -55,8 +55,8 @@ img_corr = vsnr.eval(img, maxit=100, cvg_threshold=1e-4)
 ...
 ```
 Some applicative examples are given in 
-![examples.py](https://github.com/patquem/pyvsnr/tree/main/examples/examples.py)
-and will return the following results (in addition to the one given as
+[examples.py](https://github.com/patquem/pyvsnr/tree/main/examples/examples.py). 
+They return the following results (in addition to the one given as
  illustration at the top) :
  
 **stripes removal** :
@@ -67,8 +67,7 @@ and will return the following results (in addition to the one given as
 
 **Note 1 :** in case of images batchs, in particularly in the case of
 stacks where successive images are quite similar (FIB-SEM slices for instance),
-computation time can be significantly decreased by this way (assuming all
-the images have the same size):
+computation time can be significantly decreased by this way :
 
 ```python
 import glob
@@ -77,7 +76,7 @@ from skimage import io
 
 fnames = sorted(glob.glob('my_directory/*.tif'))
 img0 = io.imread(fnames[0])
-vsnr = VSNR(img0.shape)
+vsnr = VSNR(img0.shape) # assuming all the images have the same size !!!
 vsnr.add_filter(alpha=1e-2, name='gabor', sigma=(1, 30), theta=20)
 vsnr.add_filter(alpha=5e-2, name='gabor', sigma=(3, 40), theta=20)
 vsnr.initialize()
@@ -89,11 +88,11 @@ for fname in fnames:
     ...
 ```
 **Note 2 :** in case of GPU executions, the first run is always more longer
- than the other ones. Keep it in mind when evaluating processing time.
+ than the other ones. Keep it in mind when evaluating your processing time.
  
- Running times evolution returned by ex_perf_evluatione in 
-![examples.py](https://github.com/patquem/pyvsnr/tree/main/examples/examples.py)
+ **Running times evolution :** 
 ![](examples/data/perf_evaluation_result.png)
+(returned by ex_perf_evluatione in [examples.py](https://github.com/patquem/pyvsnr/tree/main/examples/examples.py))
 
 ## Authors information
 
