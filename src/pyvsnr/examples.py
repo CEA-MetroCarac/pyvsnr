@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tifffile import imread
 
-from vsnr import VSNR, GPU_ENV
+from pyvsnr.vsnr import VSNR, GPU_ENV
 
 DATA_DIR = os.path.join(__file__, "..", "data")
 

@@ -8,8 +8,8 @@ Developper : Patrick QUEMERE
 import numpy as np
 import matplotlib.pyplot as plt
 
-from filters import gabor_filter
-from utils import pad_centered
+from pyvsnr.filters import gabor_filter
+from pyvsnr.utils import pad_centered
 
 # check GPU environment
 try:

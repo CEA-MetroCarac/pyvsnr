@@ -1,1 +1,1 @@
-from .vsnr import VSNR
+from pyvsnr.vsnr import VSNR

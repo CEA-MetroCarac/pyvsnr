@@ -4,7 +4,7 @@
 
 ## Description
 
-This repository contains the sources of the 2D-CPU/GPU based denoising codes of
+This repository contains the sources of the 2D-CPU/GPU based denoising code of
  the VSNR algorithm.
  
 ## Installation
@@ -13,11 +13,11 @@ This repository contains the sources of the 2D-CPU/GPU based denoising codes of
 
 ## Requirements
 
-For CPU execution, the vsnr algorithm requires only the
+For **CPU** execution, the vsnr algorithm requires only the
 [numpy](https://numpy.org/) package, with **matplotlib** and **tifffile**
-packages for examples/tests running.
+packages for examples and tests running.
 
-For GPU execution, the [cupy](https://cupy.dev) library is required.
+For **GPU** execution, the [cupy](https://cupy.dev) library is required.
 Follow the [installaton instructions](https://docs.cupy.dev/en/stable/install.html)
 for more details.
 
@@ -49,7 +49,6 @@ vsnr.initialize()
 
 # image processing
 img_corr = vsnr.eval(img, maxit=100, cvg_threshold=1e-4)
-
 ...
 ```
 Some applicative examples are given in 
@@ -115,14 +114,23 @@ for fname in fnames:
 
 ## Developers information
 
-Before pushing your developments, be sure the unitests run correctly.
+Before pushing your developments, check the unitests run correctly.
 
-    $ python pyvsnr.tests.py
+    $ python -m unittest pyvsnr.tests
+    VSN will run on CPU ...                                                
+    CPU/GPU running time : 4.296875                                        
+    .VSN will run on CPU ...                                               
+    CPU/GPU running time : 4.203125                                        
+    .                                                                      
+    ---------------------------------------------------------------------- 
+    Ran 2 tests in 8.512s                                                  
+                                                                           
+    OK                                                                     
     
 ## Authors information
 
-This is a port of the original Matlab code by Jerome FEHRENBACH, Pierre
-WEISS to python.
+This is a port to python of the original Matlab code developed by Jerome
+FEHRENBACH and Pierre WEISS.
 
 All credit goes to the original author.
 
