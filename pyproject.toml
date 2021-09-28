@@ -1,8 +1,4 @@
 [build-system]
 # Minimum requirements for the build system to execute.
-requires = [
-    "numpy",
-    "matplotlib",
-    "setuptools",
-    "wheel",
-]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"

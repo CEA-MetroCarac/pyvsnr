@@ -1,6 +1,6 @@
-# pyVSNR
+# pyvsnr
 
-![](examples/data/fib_sem_result.png)
+![](src/pyvsnr/data/fib_sem_result.png)
 
 ## Description
 
@@ -14,17 +14,15 @@ This repository contains the sources of the 2D-CPU/GPU based denoising codes of
 ## Requirements
 
 For CPU execution, the vsnr algorithm requires only the
-[numpy](https://numpy.org/) package.
+[numpy](https://numpy.org/) package, with **matplotlib** and **tifffile**
+packages for examples/tests running.
 
 For GPU execution, the [cupy](https://cupy.dev) library is required.
 Follow the [installaton instructions](https://docs.cupy.dev/en/stable/install.html)
 for more details.
 
-To run the [examples](https://github.com/patquem/pyvsnr/tree/main/examples/examples.py)
-, additional packages have to be installed :
-
-- os
-- time
+- numpy
+- cupy (for GPU execution, optional)
 - matplotlib
 - tifffile
 
@@ -55,15 +53,32 @@ img_corr = vsnr.eval(img, maxit=100, cvg_threshold=1e-4)
 ...
 ```
 Some applicative examples are given in 
-[examples.py](https://github.com/patquem/pyvsnr/tree/main/examples/examples.py). 
-They return the following results (in addition to the one given as
- illustration at the top) :
+[examples.py](https://github.com/patquem/pyvsnr/tree/main/src/pyvsnr/examples.py). 
  
-**stripes removal** :
-![](examples/data/camera_stripes_result.png)
+**stripes removal example** :
 
-**curtains removal** :
-![](examples/data/camera_curtains_result.png)
+    $ python
+    >>> from pyvsnr.examples import ex_camera 
+    >>> ex_camera('stripes') 
+
+![](src/pyvsnr/data/camera_stripes_result.png)
+
+**curtains removal example** :
+
+    $ python
+    >>> from pyvsnr.examples import ex_camera 
+    >>> ex_camera('curtains') 
+
+![](src/pyvsnr/data/camera_curtains_result.png)
+
+**curtains removal example on real image (FIB-SEM)** :
+
+    $ python
+    >>> from pyvsnr.examples import ex_fib_sem 
+    >>> ex_fib_sem() 
+
+![](src/pyvsnr/data/fib_sem_result.png)
+
 
 **Note 1 :** in case of images batchs, in particularly in the case of
 stacks where successive images are quite similar (FIB-SEM slices for instance),
@@ -91,9 +106,19 @@ for fname in fnames:
  than the other ones. Keep it in mind when evaluating your processing time.
  
  **Running times evolution :** 
-![](examples/data/perf_evaluation_result.png)
-(returned by ex_perf_evluatione in [examples.py](https://github.com/patquem/pyvsnr/tree/main/examples/examples.py))
+ 
+     $ python
+    >>> from pyvsnr.examples import ex_perf_evaluation 
+    >>> ex_perf_evaluation() 
+    
+![](src/pyvsnr/data/perf_evaluation_result.png)
 
+## Developers information
+
+Before pushing your developments, be sure the unitests run correctly.
+
+    $ python pyvsnr.tests.py
+    
 ## Authors information
 
 This is a port of the original Matlab code by Jerome FEHRENBACH, Pierre

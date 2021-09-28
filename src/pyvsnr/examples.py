@@ -9,15 +9,17 @@ from tifffile import imread
 
 from vsnr import VSNR, GPU_ENV
 
+DATA_DIR = os.path.join(__file__, "..", "data")
 
-def ex_camera(defects_type='stripes'):
+
+def ex_camera(defects_type='stripes', show_plots=True):
     """
-    Example of stripes or curtains removal with 'camera' image
+    Example of stripes or curtains removal from 'camera' image
     """
     assert (defects_type in ['stripes', 'curtains'])
 
-    img_ref = imread(os.path.join("data", "camera.tif"))
-    img = imread(os.path.join("data", f"camera_{defects_type}.tif"))
+    img_ref = imread(os.path.join(DATA_DIR, "camera.tif"))
+    img = imread(os.path.join(DATA_DIR, f"camera_{defects_type}.tif"))
 
     # vsnr object creation
     vsnr = VSNR(img_ref.shape)
@@ -35,29 +37,35 @@ def ex_camera(defects_type='stripes'):
     # image renormalization
     img_corr = np.clip(img_corr, 0., 1.)
 
-    # plotting
-    fig0 = plt.figure(figsize=(14, 4))
-    fig0.sfn = f"ex_camera_{defects_type}"
-    plt.subplot(131)
-    plt.title("Reference")
-    plt.imshow(img_ref)
-    plt.subplot(132)
-    plt.title("Reference + noise")
-    plt.imshow(img)
-    plt.subplot(133)
-    plt.title("Corrected")
-    plt.imshow(img_corr)
-    plt.tight_layout()
+    if show_plots:
+        fig0 = plt.figure(figsize=(14, 4))
+        fig0.sfn = f"ex_camera_{defects_type}"
+        plt.subplot(131)
+        plt.title("Reference")
+        plt.imshow(img_ref)
+        plt.subplot(132)
+        plt.title("Reference + noise")
+        plt.imshow(img)
+        plt.subplot(133)
+        plt.title("Corrected")
+        plt.imshow(img_corr)
+        plt.tight_layout()
 
-    fig1 = vsnr.plot_cvg_criteria()
-    fig1.sfn = f"ex_camera_{defects_type}_cvg"
+        fig1 = vsnr.plot_cvg_criteria()
+        fig1.sfn = f"ex_camera_{defects_type}_cvg"
+
+        plt.show()
+
+    else:
+
+        return img_corr
 
 
 def ex_fib_sem():
     """
     Example of vsnr application on a real FIB-SEM image
     """
-    img = imread(os.path.join("data", "fib_sem_sample.tif"))
+    img = imread(os.path.join(DATA_DIR, "fib_sem_sample.tif"))
 
     # image renormalization into [0, 1]
     vmax = img.max()
@@ -91,12 +99,14 @@ def ex_fib_sem():
     fig1 = vsnr.plot_cvg_criteria()
     fig1.sfn = "ex_fib_sem_cvg"
 
+    plt.show()
+
 
 def ex_vsnr_perf_evaluation():
     """
     Compare CPU and GPU running time on different image sizes
     """
-    img = imread(os.path.join("data", "fib_sem_sample.tif"))
+    img = imread(os.path.join(DATA_DIR, "fib_sem_sample.tif"))
 
     # image renormalization into [0, 1]
     img = img / 255.
@@ -146,13 +156,13 @@ def ex_vsnr_perf_evaluation():
     ax2.set_xlabel("Image size [px]")
     ax2.set_ylabel("Running time [s]")
 
+    plt.show()
+
 
 if __name__ == '__main__':
     # pylint: disable=I0011,C0103
 
-    ex_camera(defects_type='stripes')
+    # ex_camera(defects_type='stripes')
     ex_camera(defects_type='curtains')
-    # ex_fib_sem()
-    # ex_vsnr_perf_evaluation()
-
-    plt.show()
+    # figs += ex_fib_sem()
+    # figs += ex_vsnr_perf_evaluation()
