@@ -185,7 +185,8 @@ class VSNR:  # pylint: disable=I0011,C0103
             q_grad_fft = fft(self.drond1T(self.q[0]) + self.drond2T(self.q[1]))
 
             for k in range(nfilters):
-                Astarq[k] = ifft(xp.conj(self.filters_fft[k]) * q_grad_fft)
+                Astarq[k] = ifft(xp.conj(self.filters_fft[k]) * q_grad_fft,
+                                 Astarq[k].shape)
 
             lambdas_u = self.lambdas - self.tau * Astarq
 
@@ -199,7 +200,8 @@ class VSNR:  # pylint: disable=I0011,C0103
             # Correction term computation
             du = xp.zeros_like(u0)
             for k in range(nfilters):
-                du += ifft(fft(self.lambdas_b[k]) * self.filters_fft[k])
+                du += ifft(fft(self.lambdas_b[k]) * self.filters_fft[k],
+                           du.shape)
 
             # Current denoised image estimation
             u = u0 + du
