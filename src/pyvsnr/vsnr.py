@@ -244,7 +244,7 @@ class VSNR:  # pylint: disable=I0011,C0103
         res = self.xp.zeros(shape)
         res[:, 1:shape[1] - 1] = u[:, :shape[1] - 2] - u[:, 1:shape[1] - 1]
         res[:, 0] = -u[:, 0]
-        res[:, shape[0] - 1] = u[:, shape[0] - 2]
+        res[:, shape[1] - 1] = u[:, shape[1] - 2]
         return res
 
     def Prox_Phi(self, x, tau, alpha):
