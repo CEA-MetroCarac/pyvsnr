@@ -159,6 +159,10 @@ class VSNR:  # pylint: disable=I0011,C0103
         u: numpy.ndarray((m, n))
             The corrected image
         """
+        msg = f"image shape {u0.shape} passed to vsnr.eval() differs from shape"
+        msg += f" {self.shape} passed to the vsnr object instantiation"
+        assert (u0.shape == self.shape), msg
+        
         # variables names contraction (to ease the usage)
         xp, fft, ifft = self.xp, self.xp.fft.rfft2, self.xp.fft.irfft2
 
