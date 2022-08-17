@@ -103,14 +103,14 @@ class VSNR:  # pylint: disable=I0011,C0103
             Keyword to order GPU computation (if possible)
        """
         if is_gpu and GPU_ENV:
-            print("VSN will run on GPU ...")
+            print("VSNR will run on GPU ...")
             self.xp = cp
             self.is_gpu = True
             # arrays transposition (host to device)
             self.filters = self.xp.asarray(self.filters)
             self.alphas = self.xp.asarray(self.alphas)
         else:
-            print("VSN will run on CPU ...")
+            print("VSNR will run on CPU ...")
             self.xp = np
 
         # variables names contraction (to ease the usage)
@@ -162,7 +162,7 @@ class VSNR:  # pylint: disable=I0011,C0103
         msg = f"image shape {u0.shape} passed to vsnr.eval() differs from shape"
         msg += f" {self.shape} passed to the vsnr object instantiation"
         assert (u0.shape == self.shape), msg
-        
+
         # variables names contraction (to ease the usage)
         xp, fft, ifft = self.xp, self.xp.fft.rfft2, self.xp.fft.irfft2
 
@@ -211,7 +211,7 @@ class VSNR:  # pylint: disable=I0011,C0103
             u = u0 + du
 
             # cvg_criteria : Max(||u_(n+1)-u_(n)||)
-            cvg_criteria = xp.max(xp.abs(u - u_old))
+            cvg_criteria = float(xp.max(xp.abs(u - u_old)))
             self.cvg_criterias.append(cvg_criteria)
 
             nit += 1
