@@ -4,8 +4,12 @@
 
 ## Description
 
-This repository contains the sources of the 2D-CPU/GPU based denoising code of
- the VSNR algorithm.
+This repository contains the python sources of the 2D-CPU/GPU based denoising
+ code of the VSNR algorithm (originaly coded in MATLAB - see the Pierre Weiss 
+ [website](https://www.math.univ-toulouse.fr/~weiss/PageCodes.html)).
+ 
+ A python GPU-**CUDA** implementation (more performant on big images) is also
+  available at [https://github.com/CEA-MetroCarac/pyVSNR](https://github.com/CEA-MetroCarac/pyVSNR)
  
 ## Installation
 
@@ -23,8 +27,7 @@ for more details.
 
 - numpy
 - cupy (for GPU execution, optional)
-- matplotlib
-- tifffile
+- matplotlib, tifffile (for examples and tests execution only)
 
 ## Usage
 
