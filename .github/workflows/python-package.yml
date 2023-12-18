@@ -33,6 +33,9 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install flake8 pytest cupy-cuda12x
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - name: Compile CUDA script
+      run: |
+        nvcc -o src/pyvsnr/precompiled/libvsnr2d.so -lcufft -lcublas --compiler-options "-fPIC" --shared src/pyvsnr/vsnr2d.cu
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
