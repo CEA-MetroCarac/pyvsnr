@@ -14,7 +14,7 @@ jobs:
 
     runs-on: ubuntu-latest
     container: 
-      image: nvidia/cuda:12.3.1-devel-ubuntu22.04
+      image: cupy/cupy:latest
     strategy:
       fail-fast: false
       matrix:
@@ -32,7 +32,6 @@ jobs:
         apt-get install -y python3-pip
         python -m pip install --upgrade pip
         python -m pip install flake8 pytest
-        python -m pip install cupy-cuda12x
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with flake8
       run: |
