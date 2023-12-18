@@ -1,146 +1,129 @@
 # pyvsnr
 
-![](src/pyvsnr/data/fib_sem_result.png)
+![](tests/images/fib_sem_result.png)
 
 ## Description
 
-This repository contains the python sources of the 2D-CPU/GPU based denoising
+<!-- This repository contains the python sources of the 2D-CPU/GPU based denoising
  code of the VSNR algorithm (originaly coded in MATLAB - see the Pierre Weiss 
  [website](https://www.math.univ-toulouse.fr/~weiss/PageCodes.html)).
  
  A python GPU-**CUDA** implementation (more performant on big images) is also
-  available at [https://github.com/CEA-MetroCarac/pyVSNR](https://github.com/CEA-MetroCarac/pyVSNR)
- 
+  available at [https://github.com/CEA-MetroCarac/pyVSNR](https://github.com/CEA-MetroCarac/pyVSNR) -->
+
+`pyvsnr` is a Python library for computing the Variational Signal-to-Noise Ratio (VSNR) in 2D images. It provides both CPU (numpy) and GPU (cupy) implementations for efficient computation.
+
 ## Installation
 
-    $ pip install pyvsnr
+```bash
+pip install pyvsnr
+```
+
+In case of problem during CUDA execution (typically OSError or 'access memory error'),
+it may be necessary to **recompile** the shared library from source (see below).
 
 ## Requirements
 
 For **CPU** execution, the vsnr algorithm requires only the
-[numpy](https://numpy.org/) package, with **matplotlib** and **tifffile**
+[NumPy](https://numpy.org/) package, with **matplotlib** and **scikit-image**
 packages for examples and tests running.
 
-For **GPU** execution, the [cupy](https://cupy.dev) library is required.
-Follow the [installaton instructions](https://docs.cupy.dev/en/stable/install.html)
-for more details.
+For **GPU** execution, a working CUDA installation is necessary wether you want to use the CUDA version directly or the cupy one. We recommend using the [CuPy](https://cupy.dev) library, which were 10x faster in the tests. Please ensure that you install the correct version of CuPy that corresponds to your CUDA version (for example, if you're using CUDA 12.x, you should install `cupy-cuda12x`). See the [installation instructions](https://docs.cupy.dev/en/stable/install.html) for more details.
 
 - numpy
-- cupy (for GPU execution, optional)
-- matplotlib, tifffile (for examples and tests execution only)
+- cupy (**optional** but strongly recommended, allows for GPU computation)
+- matplotlib, scikit-image (**optional**, for examples and tests execution only)
+
+<!-- The Jupyter notebook requires all the above packages, plus jupyter. It is only used for examples and tests. -->
 
 ## Usage
+<!-- To use `pyvsnr`, you can import the `vsnr2d` function from `vsnr2d.py` or the `vsnr2d_cuda` function from `vsnr2d_cuda.py`. -->
 
-For a single image processing :
-
-```python
-from pyvsnr import VSNR
-from skimage import io
-
-# read the image to correct
-img = io.imread('my_image.tif')
-
-# vsnr object creation
-vsnr = VSNR(img.shape)
-
-# add filter (at least one !)
-vsnr.add_filter(alpha=1e-2, name='gabor', sigma=(1, 30), theta=20)
-vsnr.add_filter(alpha=5e-2, name='gabor', sigma=(3, 40), theta=20)
-
-# vsnr initialization
-vsnr.initialize()
-
-# image processing
-img_corr = vsnr.eval(img, maxit=100, cvg_threshold=1e-4)
-...
-```
-Some applicative examples are given in 
-[examples.py](https://github.com/patquem/pyvsnr/tree/main/src/pyvsnr/examples.py). 
- 
-**stripes removal example** :
-
-    $ python
-    >>> from pyvsnr.examples import ex_camera 
-    >>> ex_camera('stripes') 
-
-![](src/pyvsnr/data/camera_stripes_result.png)
-
-**curtains removal example** :
-
-    $ python
-    >>> from pyvsnr.examples import ex_camera 
-    >>> ex_camera('curtains') 
-
-![](src/pyvsnr/data/camera_curtains_result.png)
-
-**curtains removal example on real image (FIB-SEM)** :
-
-    $ python
-    >>> from pyvsnr.examples import ex_fib_sem 
-    >>> ex_fib_sem() 
-
-![](src/pyvsnr/data/fib_sem_result.png)
-
-
-**Note 1 :** in case of images batchs, in particularly in the case of
-stacks where successive images are quite similar (FIB-SEM slices for instance),
-computation time can be significantly decreased by this way :
+Here is a basic example using numpy:
 
 ```python
-import glob
-from pyvsnr import VSNR
-from skimage import io
+import numpy as np
+from pyvsnr import vsnr2d
 
-fnames = sorted(glob.glob('my_directory/*.tif'))
-img0 = io.imread(fnames[0])
-vsnr = VSNR(img0.shape) # assuming all the images have the same size !!!
-vsnr.add_filter(alpha=1e-2, name='gabor', sigma=(1, 30), theta=20)
-vsnr.add_filter(alpha=5e-2, name='gabor', sigma=(3, 40), theta=20)
-vsnr.initialize()
+img = np.random.random((100, 100))  # Input image
+filters = [{'name':'Dirac', 'noise_level':0.35}]  # List of filters
+nite = 20   # Number of iterations
+beta = 10.  
+xp = np     # numpy or cupy
 
-# images processing
-for fname in fnames:
-    img = io.imread(fname)
-    img_corr = vsnr.eval(img, maxit=100, cvg_threshold=1e-4)
-    ...
+# Compute VSNR using numpy or cupy
+img_corr_py = vsnr2d(img, filters, nite, beta, xp)
 ```
-**Note 2 :** in case of GPU executions, the first run is always more longer
- than the other ones. Keep it in mind when evaluating your processing time.
- 
- **Running times evolution :** 
- 
-     $ python
-    >>> from pyvsnr.examples import ex_perf_evaluation 
-    >>> ex_perf_evaluation() 
-    
-![](src/pyvsnr/data/perf_evaluation_result.png)
 
-## Developers information
+And for CUDA:
 
-Before pushing your developments, check the unitests run correctly.
+```python
+from pyvsnr import vsnr2d_cuda
 
-    $ python -m unittest pyvsnr.tests
-    VSN will run on CPU ...                                                
-    CPU/GPU running time : 4.296875                                        
-    .VSN will run on CPU ...                                               
-    CPU/GPU running time : 4.203125                                        
-    .                                                                      
-    ---------------------------------------------------------------------- 
-    Ran 2 tests in 8.512s                                                  
-                                                                           
-    OK                                                                     
-    
-## Authors information
+# Compute VSNR using CUDA
+img_corr_cuda = vsnr2d_cuda(img, filters, nite, beta, nblocks='auto')
+```
 
-This is a port to python of the original Matlab code developed by Jerome
-FEHRENBACH and Pierre WEISS.
+## Examples
 
-All credit goes to the original author.
+The `tests` directory contains a Jupyter notebook with examples and performance tests. You can run it using:
 
-In case you use the results of this code with your article, please don't forget
-to cite:
+```bash
+jupyter notebook tests/notebook.ipynb
+```
+
+**Stripes removal example :**
+![camera_stripes](tests/images/camera_stripes.png)
+**Gaussian noise removal example :**
+![camera_stripes](tests/images/camera_gaussian.png)
+**Curtains removal example :**
+![camera_stripes](tests/images/camera_curtains.png)
+
+<!-- PUT EXAMPLES IMAGES -->
+
+## Shared library re-compilation
+
+If you encounter shared library load errors then you may need
+to recompile from source. This requires a working CUDA installation
+with `nvcc` compiler. The source code is distributed with this package
+and is found in the install directory, find this using:
+
+```bash
+python -c 'import pyvsnr; print(pyvsnr.PRECOMPILED_PATH)'
+```
+
+Navigate to this directory and re-compile for your system using the following, on linux:
+
+```bash
+cd ...
+nvcc -lcufft -lcublas --compiler-options '-fPIC' -o libvsnr2d.so --shared vsnr2d.cu
+```
+
+and on Windows:
+
+```powershell
+cd ...
+nvcc -lcufft -lcublas -o libvsnr2d.dll --shared vsnr2d.cu
+```
+
+## Authors informations
+
+This Python port of the original code was developed by Killian PAVY, with guidance and direction from Patrick QUEMERE.
+
+All credit for the original code goes to Jean EYMERIE and Pierre WEISS.
+
+In case you use the results of this code in your article, please don't forget to cite:
 
 - Fehrenbach, Jérôme, Pierre Weiss, and Corinne Lorenzo. "*Variational algorithms to remove stationary noise: applications to microscopy imaging.*" IEEE Transactions on Image Processing 21.10 (2012): 4420-4430.
 - Fehrenbach, Jérôme, and Pierre Weiss. "*Processing stationary noise: model and parameter selection in variational methods.*" SIAM Journal on Imaging Sciences 7.2 (2014): 613-640.
-- *Escande, Paul, Pierre Weiss, and Wenxing Zhang. "*A variational model for multiplicative structured noise removal.*" Journal of Mathematical Imaging and Vision 57.1 (2017): 43-55.
+- Escande, Paul, Pierre Weiss, and Wenxing Zhang. "*A variational model for multiplicative structured noise removal.*" Journal of Mathematical Imaging and Vision 57.1 (2017): 43-55.
 
+<!-- The main source code is located in the `src` directory:
+
+- `vsnr2d.py`: Contains the main `vsnr2d` function for computing VSNR using numpy or cupy.
+- `vsnr2d_cuda.py`: Contains the CUDA implementation of VSNR, including the `vsnr2d_cuda` function.
+<br>
+The `tests` directory contains unit tests and performance tests:
+
+- `test_cuda_equals_py.py`: Tests to ensure the CUDA and Python implementations produce the same results.
+- `notebok.ipynb`: Jupyter notebook for examples & performance testing. -->
