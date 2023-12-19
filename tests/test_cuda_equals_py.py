@@ -1,3 +1,7 @@
+"""
+Pytest file to verify that the python code is equivalent to the cuda code
+"""
+
 import cupy as cp
 import numpy as np
 import skimage
@@ -8,6 +12,8 @@ DIRNAME = pathlib.Path(__file__).parent
 PRECOMPILED_PATH = DIRNAME.parent / 'src' / 'pyvsnr' / 'precompiled'
 
 from src.pyvsnr.vsnr2d import *
+from tests.utils import stripes_addition
+
 xp=cp
 
 cuda_code = """
@@ -343,7 +349,8 @@ def vsnr2d_cuda(img, filters, nite=20, beta=10., nblocks='auto'):
     r"""
     Calculate the corrected image using the 2D-VSNR algorithm in libvsnr2d.dll
 
-    .. note:
+    Notes
+    -----
     To ease code comparison with the original onde, most of the variable names
     have been kept as nearly as possible during the code transcription.
     Accordingly, PEP8 formatting compatibility is not always respected.
@@ -659,18 +666,17 @@ def test_vsnr_admm():
 
 
 def test_cuda_equals_cupy_numpy():
-    img = skimage.data.camera().astype(np.float32)/255
+    """
+    Test if the cuda code is equivalent to the cupy code
+    """
+    img = skimage.data.camera()
     
     maxit=20
     filters = [{'name':'Dirac', 'noise_level':0.4}]
 
-   # Add vertical stripes
-    for i in range(img.shape[0]):
-        img[i] += 0.2 * (np.random.random() - 0.5)
+    img = stripes_addition(img, 0.2)
 
-    img=np.clip(img,0,1)
-
-    img_corr_cupy = vsnr2d(xp.asarray(img), filters, nite=maxit, beta=10., xp=xp)
+    img_corr_py = vsnr2d(xp.asarray(img), filters, nite=maxit, beta=10., xp=xp)
     img_corr_cuda = vsnr2d_cuda(img, filters, nite=maxit, beta=10., nblocks='auto')
     
-    xp.testing.assert_allclose(img_corr_cuda,img_corr_cupy,atol=1e-3)
+    xp.testing.assert_allclose(img_corr_cuda,img_corr_py,atol=1e-3)

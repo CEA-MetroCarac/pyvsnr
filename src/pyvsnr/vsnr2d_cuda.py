@@ -1,9 +1,12 @@
+"""
+This python module is a wrapper for the cuda implementation of the VSNR2D
+"""
 import os
 import numpy as np
 import pathlib
 from ctypes import POINTER, c_int, c_float, CDLL
+from .vsnr2d import vmax_encoding
 
-# precompiled path = file path/../precompiled
 PRECOMPILED_PATH = pathlib.Path(__file__).parent / 'precompiled'
 
 def get_dll():
@@ -41,7 +44,8 @@ def vsnr2d_cuda(img, filters, nite=20, beta=10., nblocks='auto'):
     r"""
     Calculate the corrected image using the 2D-VSNR algorithm in libvsnr2d.dll
 
-    .. note:
+    Notes
+    -----
     To ease code comparison with the original onde, most of the variable names
     have been kept as nearly as possible during the code transcription.
     Accordingly, PEP8 formatting compatibility is not always respected.
@@ -72,6 +76,8 @@ def vsnr2d_cuda(img, filters, nite=20, beta=10., nblocks='auto'):
     """
     length = len(filters)
     n0, n1 = img.shape
+    dtype = img.dtype
+    vmax = vmax_encoding(img)
 
     # psis definition from filters
     psis = []
@@ -104,13 +110,16 @@ def vsnr2d_cuda(img, filters, nite=20, beta=10., nblocks='auto'):
         nblocks = max(nblocks_max, nblocks)
 
     # calculation
-    vmax = u0.max()
+    max_value = u0.max()
     vsnr_func = get_vsnr2d()
-    vsnr_func(psis_, length, u0_, n0, n1, nite, beta, u_, nblocks, vmax)
+    vsnr_func(psis_, length, u0_, n0, n1, nite, beta, u_, nblocks, max_value)
 
     # reshaping
     img_corr = np.array(u_).reshape(n0, n1).astype(float)
 
-    img_corr = np.clip(img_corr, 0, 1)
+    img_corr = np.clip(img_corr, 0, vmax)
+
+    # recast to original dtype
+    img_corr = img_corr.astype(dtype)
     
     return img_corr
