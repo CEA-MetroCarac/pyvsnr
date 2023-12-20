@@ -360,7 +360,6 @@ def curtains_addition(img_ref, seed=None, amplitude=0.2, sigma=(3, 40), angle=0,
 
     img = img_ref + noise
 
-    # if renormalization:
-    #     img = np.clip(img, 0, vmax)
+    img = np.clip(img, 0, vmax)
 
     return img
