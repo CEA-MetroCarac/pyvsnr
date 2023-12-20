@@ -82,7 +82,7 @@ def print_max_diff(img_corr_py, img_corr_cuda, xp):
         f" {format(difference)}"
     )
     assert xp.allclose(
-        img_corr_cuda, img_corr_py, atol=1e-2 # usually 1e-4 but if imùage is [0;255] range it is 1e-2
+        img_corr_cuda, img_corr_py, atol=1e-2 # usually 1e-4 but if image is in 255 range it is 1e-2
     ), "CUDA and Python implementations are not equal"
 
 
@@ -248,7 +248,8 @@ def print_psnr(img, noisy_img, img_corr_py, img_corr_cuda):
     )
 
 
-def plot_results(img, noisy_img, img_corr_py, img_corr_cuda, xp, save_plots=False, title="fig.png", vmax=1):
+def plot_results(
+        img, noisy_img, img_corr_py, img_corr_cuda, xp, save_plots=False, title="fig.png", vmax=1):
     """
     Plot the original image, the noisy image, the Python corrected image and
     """

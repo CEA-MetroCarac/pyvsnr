@@ -1,15 +1,17 @@
 """
 This python module is a wrapper for the cuda implementation of the VSNR2D
 """
-import os
-import numpy as np
 import pathlib
 from ctypes import POINTER, c_int, c_float, CDLL
+
+import os
+import numpy as np
 from .vsnr2d import vmax_encoding
 
 PRECOMPILED_PATH = pathlib.Path(__file__).parent / 'precompiled'
 
 def get_dll():
+    """ Load the dedicated .dll library"""
     try:
         if os.name == 'nt':
             os.add_dll_directory(str(PRECOMPILED_PATH))

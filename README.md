@@ -1,15 +1,8 @@
 # pyvsnr
 
-![](tests/images/fib_sem_result.png)
+![](tests/images/fib_sem_corr.png)
 
 ## Description
-
-<!-- This repository contains the python sources of the 2D-CPU/GPU based denoising
- code of the VSNR algorithm (originaly coded in MATLAB - see the Pierre Weiss 
- [website](https://www.math.univ-toulouse.fr/~weiss/PageCodes.html)).
- 
- A python GPU-**CUDA** implementation (more performant on big images) is also
-  available at [https://github.com/CEA-MetroCarac/pyVSNR](https://github.com/CEA-MetroCarac/pyVSNR) -->
 
 `pyvsnr` is a Python library for computing the Variational Signal-to-Noise Ratio (VSNR) in 2D images. It provides both CPU (NumPy) and GPU (CuPy or CUDA) implementations for efficient computation.
 

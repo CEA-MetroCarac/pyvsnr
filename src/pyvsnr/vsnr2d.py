@@ -15,7 +15,7 @@ def vmax_encoding(arr):
         return 65535
     else:
         raise IOError("maximum value over 65535 !!!")
-    
+
 def compute_phi(fphi1, fphi2, beta, xp):
     """
     Compute the value of fphi based on the values of fphi1, fphi2, and beta.
