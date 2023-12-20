@@ -280,30 +280,6 @@ __global__ void update_fx(CuC* ftmp1, CuC* ftmp2, CuC* fphi, CuC* fx, int n)
     }
 }
 
-// -
-// __global__ void update_y(CuR* d1u0, CuR* d2u0, CuR* tmp1, CuR* tmp2, CuR* lambda1, CuR* lambda2, CuR* y1, CuR* y2, CuR* ng, bool* ng_threshold, float beta, int n)
-// {
-//     int i    = blockIdx.x * blockDim.x + threadIdx.x;
-//     int step = blockDim.x * gridDim.x;
-//     float t1, t2, gamma;
-
-//     gamma = 1.0 / beta;
-
-//     for ( ; i < n ; i += step) {
-//         t1 = d1u0[i] - (tmp1[i] + (lambda1[i] / beta));
-//         t2 = d2u0[i] - (tmp2[i] + (lambda2[i] / beta));
-//         ng[i] = sqrtf((t1 * t1) + (t2 * t2));
-//         ng_threshold[i] = ng[i] > gamma;
-
-//         y1[i] = d1u0[i] - ng_threshold[i] * t1 * (1.0 - (1.0 / (beta * ng[i])));
-//         y2[i] = d2u0[i] - ng_threshold[i] * t2 * (1.0 - (1.0 / (beta * ng[i])));
-//     }
-    
-//     // for ( ; i < n ; i += step) {
-//     //         y1[i] = d1u0[i] - ng_threshold[i] * t1 * (1.0 - (1.0 / (beta * ng[i])));
-//     //         y2[i] = d2u0[i] - ng_threshold[i] * t2 * (1.0 - (1.0 / (beta * ng[i]))); 
-//     // }
-// }
 __global__ void update_y(CuR* d1u0, CuR* d2u0, CuR* tmp1, CuR* tmp2, CuR* lambda1, CuR* lambda2, CuR* y1, CuR* y2, float beta, int n)
 {
     int i    = blockIdx.x * blockDim.x + threadIdx.x;

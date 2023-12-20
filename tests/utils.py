@@ -1,6 +1,4 @@
-"""
-Utilities for tests
-"""
+""" Utilities for tests """
 import os
 import time
 import matplotlib.pyplot as plt
@@ -13,22 +11,20 @@ from skimage._shared.utils import (
     warn,
 )
 from skimage.util.dtype import dtype_range
-from src.pyvsnr.vsnr2d import create_gabor, vmax_encoding
+from src.pyvsnr.vsnr2d import create_gabor
 from src.pyvsnr import vsnr2d, vsnr2d_cuda
 
 
 def measure_vsnr(
-    algo, img, filters, nite=20, beta=10.0, nblocks="auto", xp=np
+    algo, img, filters, nite=20, xp=np, beta=10.0, nblocks="auto", norm=True
 ):
-    """
-    Measure the execution time of a vsnr2d algorithm
-    """
+    """ Measure the execution time of a vsnr2d algorithm """
     t0 = time.perf_counter()
 
     if algo == vsnr2d_cuda:
-        img_corr = algo(img, filters, nite=nite, beta=beta, nblocks=nblocks)
+        img_corr = algo(img, filters, nite=nite, beta=beta, nblocks=nblocks, norm=norm)
     else:
-        img_corr = algo(img, filters, nite=nite, beta=beta, xp=xp)
+        img_corr = algo(img, filters, nite=nite, xp=xp, beta=beta, norm=norm)
 
     process_time = round(time.perf_counter() - t0, 3)
 
@@ -40,40 +36,32 @@ def measure_vsnr(
     return img_corr
 
 
-def measure_vsnr_cuda(img, filters, nite=20, beta=10.0, nblocks="auto"):
-    """
-    Measure the execution time of the vsnr2d_cuda algorithm
-    """
+def measure_vsnr_cuda(img, filters, nite=20, beta=10.0, nblocks="auto", norm=True):
+    """ Measure the execution time of the vsnr2d_cuda algorithm """
     img_corr_cuda = measure_vsnr(
-        vsnr2d_cuda, img, filters, nite=nite, beta=beta, nblocks=nblocks
+        vsnr2d_cuda, img, filters, nite=nite, beta=beta, nblocks=nblocks, norm=norm
     )
     return img_corr_cuda
 
 
-def measure_vsnr_cupy(img, filters, nite=20, beta=10.0):
-    """
-    Measure the execution time of the vsnr2d_cupy algorithm
-    """
+def measure_vsnr_cupy(img, filters, nite=20, beta=10.0, norm=True):
+    """ Measure the execution time of the vsnr2d_cupy algorithm """
     img_corr_cupy = measure_vsnr(
-        vsnr2d, img, filters, nite=nite, beta=beta, xp=cp
+        vsnr2d, img, filters, nite=nite, beta=beta, xp=cp, norm=norm
     )
     return img_corr_cupy
 
 
-def measure_vsnr_numpy(img, filters, nite=20, beta=10.0):
-    """
-    Measure the execution time of the vsnr2d_numpy algorithm
-    """
+def measure_vsnr_numpy(img, filters, nite=20, beta=10.0, norm=True):
+    """ Measure the execution time of the vsnr2d_numpy algorithm """
     img_corr_numpy = measure_vsnr(
-        vsnr2d, img, filters, nite=nite, beta=beta, xp=np
+        vsnr2d, img, filters, nite=nite, beta=beta, xp=np, norm=norm
     )
     return img_corr_numpy
 
 
 def print_max_diff(img_corr_py, img_corr_cuda, xp):
-    """
-    Print the maximum difference between the CUDA and Python implementations
-    """
+    """ Print the maximum difference between the CUDA and Python implementations """
     difference = xp.abs(
         xp.asarray(img_corr_cuda) - xp.asarray(img_corr_py)
     ).max()
@@ -152,9 +140,7 @@ def mean_squared_error(image0, image1):
 
 
 def _as_floats(image0, image1):
-    """
-    Promote im1, im2 to nearest appropriate floating point precision.
-    """
+    """ Promote im1, im2 to nearest appropriate floating point precision. """
     float_type = _supported_float_type((image0.dtype, image1.dtype))
     image0 = np.asarray(image0, dtype=float_type)
     image1 = np.asarray(image1, dtype=float_type)
@@ -221,9 +207,7 @@ def peak_signal_noise_ratio(image_true, image_test, *, data_range=None):
 
 
 def print_psnr(img, noisy_img, img_corr_py, img_corr_cuda):
-    """
-    Print the PSNR of the noisy image, the CUDA corrected image and the Python
-    """
+    """ Print the PSNR of the noisy image, the CUDA corrected image and the Python """
     if isinstance(img_corr_py, cp.ndarray):
         img_corr_py = img_corr_py.get()
 
@@ -249,31 +233,30 @@ def print_psnr(img, noisy_img, img_corr_py, img_corr_cuda):
 
 
 def plot_results(
-        img, noisy_img, img_corr_py, img_corr_cuda, xp, save_plots=False, title="fig.png", vmax=1):
-    """
-    Plot the original image, the noisy image, the Python corrected image and
-    """
+        img, noisy_img, img_corr_py, img_corr_cuda, xp, save_plots=False, title="fig.png", vmin=0, vmax=1):
+    """ Plot the original image, the noisy image, the Python corrected image and """
+
     if isinstance(img_corr_py, cp.ndarray):
         img_corr_py = cp.asnumpy(img_corr_py)
 
     plt.figure(figsize=(15, 5))
     plt.subplot(1, 4, 1)
-    plt.imshow(img, vmin=0, vmax=vmax)
+    plt.imshow(img, vmin=vmin, vmax=vmax)
     plt.title("Original image")
     plt.axis("off")
 
     plt.subplot(1, 4, 2)
-    plt.imshow(noisy_img, vmin=0, vmax=vmax)
+    plt.imshow(noisy_img, vmin=vmin, vmax=vmax)
     plt.title("Noisy image")
     plt.axis("off")
 
     plt.subplot(1, 4, 3)
-    plt.imshow(img_corr_py, vmin=0, vmax=vmax)
+    plt.imshow(img_corr_py, vmin=vmin, vmax=vmax)
     plt.title(f"Cleaned {xp.__name__} image")
     plt.axis("off")
 
     plt.subplot(1, 4, 4)
-    plt.imshow(img_corr_cuda, vmin=0, vmax=vmax)
+    plt.imshow(img_corr_cuda, vmin=vmin, vmax=vmax)
     plt.title("Cleaned CUDA image")
     plt.axis("off")
 
@@ -285,28 +268,38 @@ def plot_results(
 
     plt.show()
 
+def add_gaussian_noise(img, scale=0.1):
+    """ Add gaussian noise in a image """
 
-def stripes_addition(img_base, amplitude, seed=None):
-    """
-    Add stripes defects in a image
-    """
+    vmin, vmax = img.min(), img.max()
+    noise =  np.random.normal(loc=0, scale=scale, size=img.shape)
+    noisy_img = img + noise
+
+    noisy_img = np.clip(noisy_img,vmin,vmax)
+
+    return noisy_img
+
+def stripes_addition(img_base, amplitude, seed=None, norm=True):
+    """ Add stripes defects in a image """
     np.random.seed(seed)
 
     noisy_img = img_base.copy()
-    vmax = vmax_encoding(noisy_img)
+    vmin, vmax = noisy_img.min(), noisy_img.max()
 
-    noisy_img = noisy_img / vmax
+    if norm:
+        noisy_img = noisy_img / vmax
 
     for i in range(img_base.shape[0]):
         noise = amplitude * (np.random.random() - 0.5)
         noisy_img[i] += noise
 
-    noisy_img = np.clip(noisy_img, 0, 1)
+    if norm:
+        noisy_img = np.clip(noisy_img, 0, 1)
 
     return noisy_img
 
 
-def curtains_addition(img_ref, seed=None, amplitude=0.2, sigma=(3, 40), angle=0, threshold=0.999):
+def curtains_addition(img_ref, seed=None, amplitude=0.2, sigma=(3, 40), angle=0, threshold=0.999, norm=True):
     """
     Add curtains effects in a image
 
@@ -339,7 +332,8 @@ def curtains_addition(img_ref, seed=None, amplitude=0.2, sigma=(3, 40), angle=0,
     sigmax, sigmay = sigma
 
     # relative to absolute noise amplitude conversion
-    vmax = vmax_encoding(img_ref)
+    vmin, vmax = img_ref.min(), img_ref.max()
+
     amplitude *= vmax
 
     # curtains definition (from gabor filter) and location
@@ -360,7 +354,7 @@ def curtains_addition(img_ref, seed=None, amplitude=0.2, sigma=(3, 40), angle=0,
     #     noise *= -1.
 
     img = img_ref + noise
-
-    img = np.clip(img, 0, vmax)
+    if norm:
+        img = np.clip(img, vmin, vmax)
 
     return img

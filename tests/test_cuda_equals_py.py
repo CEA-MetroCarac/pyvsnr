@@ -1,6 +1,4 @@
-"""
-Pytest file to verify that the python code is equivalent to the cuda code
-"""
+""" Pytest file to verify that the python code is equivalent to the cuda code """
 import pathlib
 import os
 from ctypes import POINTER, c_int, c_float, CDLL
@@ -19,8 +17,9 @@ from src.pyvsnr.vsnr2d import (
     update_y,
     create_dirac,
     create_gabor,
-    vsnr2d,
 )
+
+from src.pyvsnr import vsnr2d, vsnr2d_cuda
 
 from tests.utils import stripes_addition
 
@@ -335,7 +334,7 @@ mod = cp.RawModule(
 
 
 def get_dll():
-    """Load the dedicated .dll library"""
+    """ Load the dedicated .dll library """
     try:
         if os.name == "nt":
             os.add_dll_directory(str(PRECOMPILED_PATH))
@@ -356,7 +355,7 @@ def get_dll():
 
 
 def get_vsnr2d():
-    """Load the 'cuda' function from the dedicated .dll library"""
+    """ Load the 'cuda' function from the dedicated .dll library """
     dll = get_dll()
     func = dll.VSNR_2D_FIJI_GPU
     func.argtypes = [
@@ -375,91 +374,12 @@ def get_vsnr2d():
 
 
 def get_nblocks():
-    """Get the number of maximum threads per block library"""
+    """ Get the number of maximum threads per block library """
     dll = get_dll()
     return dll.getMaxBlocks()
 
-
-def vsnr2d_cuda(img, filters, nite=20, beta=10.0, nblocks="auto"):
-    r"""
-    Calculate the corrected image using the 2D-VSNR algorithm in libvsnr2d.dll
-
-    Notes
-    -----
-    To ease code comparison with the original onde, most of the variable names
-    have been kept as nearly as possible during the code transcription.
-    Accordingly, PEP8 formatting compatibility is not always respected.
-
-    Parameters
-    ----------
-    img: numpy.ndarray((n0, n1))
-        The image to process
-    filters: list of dicts
-        Dictionaries that contains filters definition.
-        Example For a 'Dirac' filter:
-        - filter={'name':'Dirac', 'noise_level':10}
-        Example For a 'Gabor' filter:
-        - filter={'name':'Gabor', 'noise_level':5, 'sigma':(3, 40), 'theta':45}
-        For further informations, see :
-        https://www.math.univ-toulouse.fr/~weiss/Codes/VSNR/Documentation_VSNR_V2_Fiji.pdf
-    nite: int, optional
-        Number of iterations in the denoising processing
-    beta: float, optional
-        Beta parameters
-    nblocks: 'auto' or int, optional
-        Number of threads per block to work with
-
-    Returns
-    -------
-    img_corr: numpy.ndarray((n0, n1))
-        The corrected image
-    """
-    length = len(filters)
-    n0, n1 = img.shape
-
-    # psis definition from filters
-    psis = []
-    for filt in filters:
-        name = filt["name"]
-        noise_level = filt["noise_level"]
-        if name == "Dirac":
-            psis += [0, noise_level]
-        elif name == "Gabor":
-            sigma = filt["sigma"]
-            theta = filt["theta"]
-            psis += [1, noise_level, sigma[0], sigma[1], theta]
-        else:
-            raise IOError(f"filter name '{name}' should be 'Dirac' or 'Gabor'")
-
-    # flattened arrays and corresponding pointers definition
-    psis = np.asarray(psis).flatten()
-    u0 = img.flatten()
-    u = np.zeros_like(u0)
-
-    psis_ = (c_float * len(psis))(*psis)
-    u0_ = (c_float * len(u0))(*u0)
-    u_ = (c_float * len(u))(*u)
-
-    # 'auto' nblocks definition
-    nblocks_max = get_nblocks()
-    if nblocks == "auto":
-        nblocks = nblocks_max
-    else:
-        nblocks = max(nblocks_max, nblocks)
-
-    # calculation
-    vmax = u0.max()
-    vsnr_func = get_vsnr2d()
-    vsnr_func(psis_, length, u0_, n0, n1, nite, beta, u_, nblocks, vmax)
-
-    # reshaping
-    img_corr = np.array(u_).reshape(n0, n1).astype(float)
-
-    return img_corr
-
-
 def cuda_algo():
-    """Test the cuda algorithm"""
+    """ Test the cuda algorithm """
     # image loading and intensity rescaling
     img0 = data.camera()
 
@@ -487,7 +407,7 @@ def cuda_algo():
 
 
 def test_multiply():
-    """Test the multiply functions"""
+    """ Test the multiply functions """
     multiply_kernel = mod.get_function("product_carray")
 
     a_kernel = (
@@ -527,7 +447,7 @@ def test_multiply():
 
 
 def test_setd1():
-    """Test the setd1 functions"""
+    """ Test the setd1 functions """
     # setd1_kernel = cp.RawKernel(cuda_code, 'setd1')
     setd1_kernel = mod.get_function("setd1")
     n1 = 100
@@ -540,7 +460,7 @@ def test_setd1():
 
 
 def test_setd2():
-    """Test the setd2 functions"""
+    """ Test the setd2 functions """
     # setd2_kernel = cp.RawKernel(cuda_code, 'setd2')
     setd2_kernel = mod.get_function("setd2")
     n1 = 100
@@ -553,7 +473,7 @@ def test_setd2():
 
 
 def test_compute_norm():
-    """Test the compute_norm functions"""
+    """ Test the compute_norm functions """
     # compute_norm_kernel = cp.RawKernel(cuda_code, 'compute_norm')
     compute_norm_kernel = mod.get_function("compute_norm")
     fpsi_kernel = xp.random.rand(100, 100, dtype=xp.float64).astype(
@@ -568,7 +488,7 @@ def test_compute_norm():
 
 
 def test_compute_product():
-    """Test the compute_product functions"""
+    """ Test the compute_product functions """
     # compute_product_kernel = cp.RawKernel(cuda_code, 'compute_product')
     compute_product_kernel = mod.get_function("compute_product")
     fpsi_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
@@ -590,7 +510,7 @@ def test_compute_product():
     xp.testing.assert_allclose(ftmp, ftmp_kernel)
 
 def test_compute_sqrtf():
-    """Test the compute_sqrtf functions"""
+    """ Test the compute_sqrtf functions """
     # compute_sqrtf_kernel = cp.RawKernel(cuda_code, 'compute_sqrtf')
     compute_sqrtf_kernel = mod.get_function("compute_sqrtf")
     fsum_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
@@ -605,7 +525,7 @@ def test_compute_sqrtf():
 
 
 def test_compute_phi():
-    """Test the compute_phi functions"""
+    """ Test the compute_phi functions """
     # compute_phi_kernel = cp.RawKernel(cuda_code, 'compute_phi')
     compute_phi_kernel = mod.get_function("compute_phi")
     fphi_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
@@ -635,7 +555,7 @@ def test_compute_phi():
     )  # ?? fonctionnait sans préciser la tolerance avec assert np.allclose
 
 def test_update_psi():
-    """Test the update_psi functions"""
+    """ Test the update_psi functions """
     # update_psi_kernel = cp.RawKernel(cuda_code, 'update_psi')
     update_psi_kernel = mod.get_function("update_psi")
     fpsitemp_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
@@ -660,7 +580,7 @@ def test_update_psi():
 
 
 def test_update_y():
-    """Test the update_y functions"""
+    """ Test the update_y functions """
     # update_y_kernel = cp.RawKernel(cuda_code, 'update_y')
     update_y_kernel = mod.get_function("update_y")
     d1u0_kernel = xp.zeros((10000,), dtype=xp.float32)
@@ -706,7 +626,7 @@ def test_update_y():
 
 
 def test_create_dirac():
-    """Test the create_dirac functions"""
+    """ Test the create_dirac functions """
     # create_dirac_kernel = cp.RawKernel(cuda_code, 'create_dirac')
     create_dirac_kernel = mod.get_function("create_dirac")
     psi_kernel = xp.zeros((10000,), dtype=xp.float32)
@@ -719,7 +639,7 @@ def test_create_dirac():
 
 
 def test_create_gabor():
-    """Test the create_gabor functions"""
+    """ Test the create_gabor functions """
     # create_gabor_kernel = cp.RawKernel(cuda_code, 'create_gabor')
     create_gabor_kernel = mod.get_function("create_gabor")
     psi_kernel = xp.zeros((10000,), dtype=xp.float32)
@@ -741,7 +661,7 @@ def test_create_gabor():
     assert xp.allclose(psi, psi_kernel, atol=1e-4)
 
 def test_create_filters():
-    """Test the create_filters functions"""
+    """ Test the create_filters functions """
 
     u0 = np.loadtxt(DIRNAME / "TEST_VSNR_ADMM/camera.txt", dtype=np.float32)
     gpsi_kernel = np.loadtxt(
@@ -760,7 +680,7 @@ def test_create_filters():
 
 
 def test_vsnr_admm():
-    """Test the vsnr_admm functions"""
+    """ Test the vsnr_admm functions """
     gu0 = data.camera().flatten()
 
     if xp == cp:
@@ -799,9 +719,7 @@ def test_vsnr_admm():
 
 
 def test_cuda_equals_cupy_numpy():
-    """
-    Test if the cuda code is equivalent to the cupy code
-    """
+    """ Test if the cuda code is equivalent to the cupy code """
     img = data.camera()
 
     maxit = 20
@@ -810,28 +728,42 @@ def test_cuda_equals_cupy_numpy():
     img = stripes_addition(img, 0.2)
 
     img_corr_py = vsnr2d(
-        xp.asarray(img), filters, nite=maxit, beta=10.0, xp=xp
+        img, filters, nite=maxit, xp=xp
     )
     img_corr_cuda = vsnr2d_cuda(
-        img, filters, nite=maxit, beta=10.0, nblocks="auto"
+        img, filters, nite=maxit
     )
 
     xp.testing.assert_allclose(img_corr_cuda, img_corr_py, atol=1e-3)
 
-# def test_data_min_max_preservation():
-#     """
-#     Test if the min and max of the original image are preserved
-#     """
-#     img = data.camera()
+def test_data_min_max_preserved():
+    """ Test if the min and max of the original image are preserved """
+    img = data.camera()
 
-#     maxit = 20
-#     filters = [{"name": "Dirac", "noise_level": 0.4}]
+    maxit = 20
+    filters = [{"name": "Dirac", "noise_level": 0.4}]
 
-#     img = stripes_addition(img, 0.2)
+    img = stripes_addition(img, 0.2)
 
-#     img_corr_cuda = vsnr2d_cuda(
-#         img, filters, nite=maxit, beta=10.0, nblocks="auto"
-#     )
+    img_corr = vsnr2d(img, filters, nite=maxit, xp=xp)
+    img_corr_cuda = vsnr2d_cuda(img, filters, nite=maxit)
 
-#     assert img_corr_cuda.min() == img.min()
-#     assert img_corr_cuda.max() == img.max()
+    assert img_corr.min() == img_corr_cuda.min() == img.min()
+    assert img_corr.max() == img_corr_cuda.max() == img.max()
+
+def test_original_img_preserved():
+    """ Test if the original image is preserved """
+    img = data.camera()
+    maxit=20
+    filters = [{"name": "Dirac", "noise_level": 0.4}]
+
+    img = stripes_addition(img, 0.2)
+    img_copy = img.copy()
+
+    vsnr2d(img, filters, nite=maxit, xp=xp)
+    vsnr2d_cuda(img, filters, nite=maxit)
+
+    assert xp.array_equal(img, img_copy)
+
+
+

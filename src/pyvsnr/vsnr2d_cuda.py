@@ -1,17 +1,14 @@
-"""
-This python module is a wrapper for the cuda implementation of the VSNR2D
-"""
+""" This python module is a wrapper for the cuda implementation of the VSNR2D """
 import pathlib
 from ctypes import POINTER, c_int, c_float, CDLL
 
 import os
 import numpy as np
-from .vsnr2d import vmax_encoding
 
 PRECOMPILED_PATH = pathlib.Path(__file__).parent / 'precompiled'
 
 def get_dll():
-    """ Load the dedicated .dll library"""
+    """ Load the dedicated .dll library """
     try:
         if os.name == 'nt':
             os.add_dll_directory(str(PRECOMPILED_PATH))
@@ -29,12 +26,12 @@ def get_dll():
                       '(see readme)') from err
    
 def get_nblocks():
-    """ Get the number of maximum threads per block library"""
+    """ Get the number of maximum threads per block library """
     dll = get_dll()
     return dll.getMaxBlocks()
 
 def get_vsnr2d():
-    """ Load the 'cuda' function from the dedicated .dll library"""
+    """ Load the 'cuda' function from the dedicated .dll library """
     dll = get_dll()
     func = dll.VSNR_2D_FIJI_GPU
     func.argtypes = [POINTER(c_float), c_int, POINTER(c_float),
@@ -42,7 +39,7 @@ def get_vsnr2d():
                      c_float, POINTER(c_float), c_int, c_float]
     return func
 
-def vsnr2d_cuda(img, filters, nite=20, beta=10., nblocks='auto'):
+def vsnr2d_cuda(img, filters, nite=20, beta=10., nblocks='auto', norm=True):
     r"""
     Calculate the corrected image using the 2D-VSNR algorithm in libvsnr2d.dll
 
@@ -70,6 +67,9 @@ def vsnr2d_cuda(img, filters, nite=20, beta=10., nblocks='auto'):
         Beta parameters
     nblocks: 'auto' or int, optional
         Number of threads per block to work with
+    norm: bool, optional
+        If True, the image is normalized before processing and the output
+        image is renormalized to the original range
 
     Returns
     -------
@@ -79,7 +79,11 @@ def vsnr2d_cuda(img, filters, nite=20, beta=10., nblocks='auto'):
     length = len(filters)
     n0, n1 = img.shape
     dtype = img.dtype
-    vmax = vmax_encoding(img)
+    
+    vmin, vmax = img.min(), img.max()
+
+    if norm:
+        img = (img - vmin) / (vmax - vmin)
 
     # psis definition from filters
     psis = []
@@ -112,14 +116,16 @@ def vsnr2d_cuda(img, filters, nite=20, beta=10., nblocks='auto'):
         nblocks = max(nblocks_max, nblocks)
 
     # calculation
-    max_value = u0.max()
     vsnr_func = get_vsnr2d()
-    vsnr_func(psis_, length, u0_, n0, n1, nite, beta, u_, nblocks, max_value)
+    vsnr_func(psis_, length, u0_, n0, n1, nite, beta, u_, nblocks, u0.max())
 
     # reshaping
     img_corr = np.array(u_).reshape(n0, n1)
 
-    img_corr = np.clip(img_corr, 0, vmax)
+    if norm:
+        img_corr = np.clip(img_corr, 0, 1)
+        img_corr = (img_corr - img_corr.min()) / (img_corr.max() - img_corr.min())
+        img_corr = vmin + img_corr * (vmax - vmin)
 
     # recast to original dtype
     img_corr = img_corr.astype(dtype)

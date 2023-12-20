@@ -5,21 +5,8 @@ It contains several improvements in terms of performance and memory usage.
 """
 import numpy as np
 
-def vmax_encoding(arr):
-    """ Basic function to estimate vmax value related to array type encoding"""
-    if arr.max() <= 1.:
-        return 1.
-    elif arr.max() <= 255:
-        return 255
-    elif arr.max() <= 65535:
-        return 65535
-    else:
-        raise IOError("maximum value over 65535 !!!")
-
 def compute_phi(fphi1, fphi2, beta, xp):
-    """
-    Compute the value of fphi based on the values of fphi1, fphi2, and beta.
-    """
+    """ Compute the value of fphi based on the values of fphi1, fphi2, and beta. """
     # Compute the squares of the real and imaginary parts of fphi1 and fphi2
     fphi1_squared_real = xp.square(xp.abs(fphi1))
     fphi2_squared_real = xp.square(xp.abs(fphi2))
@@ -35,27 +22,21 @@ def compute_phi(fphi1, fphi2, beta, xp):
 
 
 def update_psi(fpsitemp, fsum, alpha, xp):
-    """
-    Update the value of fsum based on the values of fpsitemp, fsum, and alpha.
-    """
+    """ Update the value of fsum based on the values of fpsitemp, fsum, and alpha. """
     # // fsum += |fpsitemp|^2 / alpha_i;
     fsum = xp.add(fsum, xp.divide(fpsitemp, alpha))
     return fsum
 
 
 def create_dirac(n, val, xp):
-    """
-    Create a Dirac filter.
-    """
+    """ Create a Dirac filter. """
     psi = xp.zeros((n,), dtype=xp.float32)
     psi[0] = val
     return psi
 
 
 def create_gabor(n0, n1, level, sigmax, sigmay, angle, phase, lambda_, xp):
-    """
-    Create a Gabor filter.
-    """
+    """ Create a Gabor filter. """
     psi = xp.zeros((n0, n1), dtype=xp.float32)
 
     theta = xp.radians(angle)
@@ -101,9 +82,7 @@ def update_y(d1u0, d2u0, tmp1, tmp2, lambda1, lambda2, beta, xp):
 
 
 def setd1(n, n1, xp):
-    """
-    Set the values of d1.
-    """
+    """ Set the values of d1. """
     d1 = xp.zeros((n,), dtype=xp.complex64)
     d1[0] = 1
     d1[n1 - 1] = -1
@@ -112,9 +91,7 @@ def setd1(n, n1, xp):
 
 
 def setd2(n, n1, xp):
-    """
-    Set the values of d2.
-    """
+    """ Set the values of d2. """
     d2 = xp.zeros((n,), dtype=xp.complex64)
     d2[0] = 1
     d2[n - n1] = -1
@@ -123,9 +100,7 @@ def setd2(n, n1, xp):
 
 
 def compute_vsnr(filters, u0, n0, n1, nit, beta, vmax, xp):
-    """
-    Calculate the corrected image using the 2D-VSNR algorithm
-    """
+    """ Calculate the corrected image using the 2D-VSNR algorithm """
     n = n0 * n1
     gu = xp.zeros((n,), dtype=xp.float32)
 
@@ -204,9 +179,7 @@ def create_filters(filters, gu0, n0, n1, xp):
 
 
 def vsnr_admm(u0, psi, n0, n1, nit, beta, xp):
-    """
-    Denoise the image u0 using the VSNR algorithm.
-    """
+    """ Denoise the image u0 using the VSNR algorithm. """
     n = n0 * n1
     # m=n0*(n1//2+1)
 
@@ -293,7 +266,7 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp):
     return u
 
 
-def vsnr2d(img, filters, nite=20, beta=10.0, xp=np):
+def vsnr2d(img, filters, nite=20, xp=np, beta=10.0, norm=True):
     r"""
     Calculate the corrected image using the 2D-VSNR algorithm in libvsnr2d.dll
 
@@ -325,6 +298,9 @@ def vsnr2d(img, filters, nite=20, beta=10.0, xp=np):
         (and potentially more distortion). A lower beta value gives more weight to the data fidelity
         term, which encourages solutions that are closer to the original image but may result in
         less denoising.
+    norm: bool, optional
+        If True, the image is normalized before processing and the output
+        image is renormalized to the original range
 
     Returns
     -------
@@ -332,21 +308,27 @@ def vsnr2d(img, filters, nite=20, beta=10.0, xp=np):
         The corrected image
     """
     img = xp.asarray(img)
-    vmax = vmax_encoding(img)
+    n0, n1 = img.shape
     dtype = img.dtype
 
-    n0, n1 = img.shape
+    vmin, vmax = img.min(), img.max()
+
+    if norm:
+        img = (img - vmin) / (vmax - vmin)
+
     u0 = img.flatten()
     u = xp.zeros_like(u0)
 
     # calculation
-    max_value = u0.max()
-    u = compute_vsnr(filters, u0, n0, n1, nite, beta, max_value, xp)
+    u = compute_vsnr(filters, u0, n0, n1, nite, beta, u0.max(), xp)
 
     # reshaping
     img_corr = xp.array(u).reshape(n0, n1)
 
-    img_corr = xp.clip(img_corr, 0, vmax)
+    if norm:
+        img_corr = xp.clip(img_corr, 0, 1)
+        img_corr = (img_corr - img_corr.min()) / (img_corr.max() - img_corr.min())
+        img_corr = vmin + img_corr * (vmax - vmin)
 
     # cast to original dtype
     img_corr = img_corr.astype(dtype)

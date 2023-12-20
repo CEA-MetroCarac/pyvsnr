@@ -40,11 +40,11 @@ from pyvsnr import vsnr2d
 
 img = np.random.random((100, 100))  # Input image
 filters = [{'name':'Dirac', 'noise_level':0.35}]  # List of filters
-nite = 20   # Number of iterations  
+n = 20   # Number of iterations  
 xp = np     # numpy or cupy
 
 # Compute VSNR using numpy or cupy
-img_corr_py = vsnr2d(img, filters, nite, xp=xp)
+img_corr_py = vsnr2d(img, filters, nite=n, xp=xp)
 ```
 
 And for CUDA:
@@ -53,7 +53,7 @@ And for CUDA:
 from pyvsnr import vsnr2d_cuda
 
 # Compute VSNR using CUDA
-img_corr_cuda = vsnr2d_cuda(img, filters, nite)
+img_corr_cuda = vsnr2d_cuda(img, filters, nite=n)
 ```
 
 ## Examples
