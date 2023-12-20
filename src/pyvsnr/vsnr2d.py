@@ -344,7 +344,7 @@ def vsnr2d(img, filters, nite=20, beta=10.0, xp=np):
     u = compute_vsnr(filters, u0, n0, n1, nite, beta, max_value, xp)
 
     # reshaping
-    img_corr = xp.array(u).reshape(n0, n1).astype(float)
+    img_corr = xp.array(u).reshape(n0, n1)
 
     img_corr = xp.clip(img_corr, 0, vmax)
 

@@ -117,7 +117,7 @@ def vsnr2d_cuda(img, filters, nite=20, beta=10., nblocks='auto'):
     vsnr_func(psis_, length, u0_, n0, n1, nite, beta, u_, nblocks, max_value)
 
     # reshaping
-    img_corr = np.array(u_).reshape(n0, n1).astype(float)
+    img_corr = np.array(u_).reshape(n0, n1)
 
     img_corr = np.clip(img_corr, 0, vmax)
 

@@ -817,3 +817,21 @@ def test_cuda_equals_cupy_numpy():
     )
 
     xp.testing.assert_allclose(img_corr_cuda, img_corr_py, atol=1e-3)
+
+# def test_data_min_max_preservation():
+#     """
+#     Test if the min and max of the original image are preserved
+#     """
+#     img = data.camera()
+
+#     maxit = 20
+#     filters = [{"name": "Dirac", "noise_level": 0.4}]
+
+#     img = stripes_addition(img, 0.2)
+
+#     img_corr_cuda = vsnr2d_cuda(
+#         img, filters, nite=maxit, beta=10.0, nblocks="auto"
+#     )
+
+#     assert img_corr_cuda.min() == img.min()
+#     assert img_corr_cuda.max() == img.max()
