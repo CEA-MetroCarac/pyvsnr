@@ -4,9 +4,23 @@ its a port of the original CUDA implementation to python using cupy.
 It contains several improvements in terms of performance and memory usage.
 """
 import numpy as np
+from .vsnr2d_cuda import get_dll, vsnr2d_cuda
+xp = np
+
+# determine the algo to use for auto mode
+# 1. cupy; 2. cuda; 3. numpy
+try:
+    import cupy as cp
+    xp = cp
+except ImportError:
+    try:
+        get_dll()
+        cuda_available = True
+    except:
+        pass
 
 def compute_phi(fphi1, fphi2, beta, xp):
-    """ Compute the value of fphi based on the values of fphi1, fphi2, and beta. """
+    """Compute the value of fphi based on the values of fphi1, fphi2, and beta."""
     # Compute the squares of the real and imaginary parts of fphi1 and fphi2
     fphi1_squared_real = xp.square(xp.abs(fphi1))
     fphi2_squared_real = xp.square(xp.abs(fphi2))
@@ -22,21 +36,21 @@ def compute_phi(fphi1, fphi2, beta, xp):
 
 
 def update_psi(fpsitemp, fsum, alpha, xp):
-    """ Update the value of fsum based on the values of fpsitemp, fsum, and alpha. """
+    """Update the value of fsum based on the values of fpsitemp, fsum, and alpha."""
     # // fsum += |fpsitemp|^2 / alpha_i;
     fsum = xp.add(fsum, xp.divide(fpsitemp, alpha))
     return fsum
 
 
 def create_dirac(n, val, xp):
-    """ Create a Dirac filter. """
+    """Create a Dirac filter."""
     psi = xp.zeros((n,), dtype=xp.float32)
     psi[0] = val
     return psi
 
 
 def create_gabor(n0, n1, level, sigmax, sigmay, angle, phase, lambda_, xp):
-    """ Create a Gabor filter. """
+    """Create a Gabor filter."""
     psi = xp.zeros((n0, n1), dtype=xp.float32)
 
     theta = xp.radians(angle)
@@ -82,7 +96,7 @@ def update_y(d1u0, d2u0, tmp1, tmp2, lambda1, lambda2, beta, xp):
 
 
 def setd1(n, n1, xp):
-    """ Set the values of d1. """
+    """Set the values of d1."""
     d1 = xp.zeros((n,), dtype=xp.complex64)
     d1[0] = 1
     d1[n1 - 1] = -1
@@ -91,7 +105,7 @@ def setd1(n, n1, xp):
 
 
 def setd2(n, n1, xp):
-    """ Set the values of d2. """
+    """Set the values of d2."""
     d2 = xp.zeros((n,), dtype=xp.complex64)
     d2[0] = 1
     d2[n - n1] = -1
@@ -100,7 +114,7 @@ def setd2(n, n1, xp):
 
 
 def compute_vsnr(filters, u0, n0, n1, nit, beta, vmax, xp, cvg_threshold):
-    """ Calculate the corrected image using the 2D-VSNR algorithm """
+    """Calculate the corrected image using the 2D-VSNR algorithm"""
     n = n0 * n1
     gu = xp.zeros((n,), dtype=xp.float32)
 
@@ -113,7 +127,9 @@ def compute_vsnr(filters, u0, n0, n1, nit, beta, vmax, xp, cvg_threshold):
     gpsi = create_filters(filters, gu0, n0, n1, xp)
 
     # 3. Denoises the image
-    gu, cvg_criterias = vsnr_admm(gu0, gpsi, n0, n1, nit, beta, xp, cvg_threshold=cvg_threshold)
+    gu, cvg_criterias = vsnr_admm(
+        gu0, gpsi, n0, n1, nit, beta, xp, cvg_threshold=cvg_threshold
+    )
 
     # 4. Copies the result to u
     gu = xp.multiply(gu, vmax)
@@ -153,7 +169,9 @@ def create_filters(filters, gu0, n0, n1, xp):
         elif filt["name"] == "Gabor":
             sigma = filt["sigma"]
             theta = filt["theta"]
-            psitemp = create_gabor(n0, n1, 1, sigma[0], sigma[1], theta, 0, 0, xp)
+            psitemp = create_gabor(
+                n0, n1, 1, sigma[0], sigma[1], theta, 0, 0, xp
+            )
             eta = filt["noise_level"]
 
         fpsitemp = xp.fft.fft2(psitemp.reshape(n0, n1)).flatten()
@@ -170,7 +188,9 @@ def create_filters(filters, gu0, n0, n1, xp):
         nmax = max(max1, max2)
         alpha = np.sqrt(n) * n**2 * nmax / (norm * eta)
 
-        fsum = update_psi(fpsitemp, fsum, alpha, xp)  # fsum += |fpsitemp|^2 / alpha_i;
+        fsum = update_psi(
+            fpsitemp, fsum, alpha, xp
+        )  # fsum += |fpsitemp|^2 / alpha_i;
 
     fsum = xp.sqrt(fsum)  # // fsum = sqrtf(fsum);
     gpsi = xp.fft.ifft2(fsum.reshape(n0, n1), norm="forward").flatten()
@@ -179,7 +199,7 @@ def create_filters(filters, gu0, n0, n1, xp):
 
 
 def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
-    """ Denoise the image u0 using the VSNR algorithm. """
+    """Denoise the image u0 using the VSNR algorithm."""
     n = n0 * n1
     # m=n0*(n1//2+1)
 
@@ -222,11 +242,11 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     # // Computes fphi
     fphi = compute_phi(fphi1, fphi2, beta, xp)
 
-    cvg_criteria=1000.
-    cvg_criterias=[]
-    i=0
-    fx_old=0
-    while i<nit and cvg_criteria>cvg_threshold:
+    cvg_criteria = 1000.0
+    cvg_criterias = []
+    i = 0
+    fx_old = 0
+    while i < nit and cvg_criteria > cvg_threshold:
         #     // -------------------------------------------------------------
         #     // First step, x update : (I+beta ATA)x = AT (-lambda+beta*ATy)
         #     // -------------------------------------------------------------
@@ -248,8 +268,12 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
 
         ftmp1 = xp.multiply(fphi1, fx)
         ftmp2 = xp.multiply(fphi2, fx)
-        tmp1 = xp.fft.ifft2(ftmp1.reshape(n0, n1), norm="forward").flatten().real
-        tmp2 = xp.fft.ifft2(ftmp2.reshape(n0, n1), norm="forward").flatten().real
+        tmp1 = (
+            xp.fft.ifft2(ftmp1.reshape(n0, n1), norm="forward").flatten().real
+        )
+        tmp2 = (
+            xp.fft.ifft2(ftmp2.reshape(n0, n1), norm="forward").flatten().real
+        )
         tmp1 = xp.divide(tmp1, n)  # normalize_array(tmp1)
         tmp2 = xp.divide(tmp2, n)  # normalize_array(tmp2)
 
@@ -261,12 +285,14 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
         lambda1 = lambda1 + xp.multiply(beta, xp.subtract(tmp1, y1))
         lambda2 = lambda2 + xp.multiply(beta, xp.subtract(tmp2, y2))
 
-        if i!=0:
-            cvg_criteria = float(xp.max(xp.abs(fx - fx_old))/xp.max(xp.abs(fx)))
+        if i != 0:
+            cvg_criteria = float(
+                xp.max(xp.abs(fx - fx_old)) / xp.max(xp.abs(fx))
+            )
             cvg_criterias.append(cvg_criteria)
-        fx_old=fx
-        i+=1
-    
+        fx_old = fx
+        i += 1
+
     # // Last but not the least : u = u0 - (psi * x)
     ftmp1 = xp.multiply(fx, fpsi)
     u = xp.fft.ifft2(ftmp1.reshape(n0, n1), norm="forward").flatten().real
@@ -276,7 +302,16 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     return u, cvg_criterias
 
 
-def vsnr2d(img, filters, maxit=20, xp=np, beta=10.0, norm=True, cvg_threshold=0, return_cvg=False):
+def vsnr2d(
+    img,
+    filters,
+    maxit=20,
+    algo='auto',
+    beta=10.0,
+    norm=True,
+    cvg_threshold=0,
+    return_cvg=False,
+):
     r"""
     Calculate the corrected image using the 2D-VSNR algorithm in libvsnr2d.dll
 
@@ -301,6 +336,9 @@ def vsnr2d(img, filters, maxit=20, xp=np, beta=10.0, norm=True, cvg_threshold=0,
 
     maxit: int, optional
         Number of iterations in the denoising processing
+    algo: str, optional
+        The algorithm to use for the computation. Can be 'cupy', 'cuda', or 'numpy'.
+        If 'auto', the best available algorithm will be used.
     beta: float
         The regularization parameter in the VSNR model. Controls the trade-off between the data
         fidelity term and the regularization term. A higher beta value gives more weight to the
@@ -319,7 +357,24 @@ def vsnr2d(img, filters, maxit=20, xp=np, beta=10.0, norm=True, cvg_threshold=0,
     img_corr: numpy.ndarray((n0, n1))
         The corrected image
     """
-    img = xp.asarray(img)
+    xp_copy = xp # this is to avoid using global variable
+
+    if algo == 'auto':
+        if xp == np and cuda_available:
+            return vsnr2d_cuda(img, filters, nite=maxit, beta=beta, nblocks='auto', norm=norm)
+    elif algo == 'cupy':
+        try :
+            xp_copy = cp
+        except:
+            raise ImportError("cupy is not installed")
+    elif algo == 'cuda':
+        return vsnr2d_cuda(img, filters, nite=maxit, beta=beta, nblocks='auto', norm=norm)
+    elif algo == 'numpy':
+        xp_copy = np
+    else:
+        raise ValueError("algo must be 'auto', 'cupy', 'cuda', or 'numpy'")
+
+    img = xp_copy.asarray(img)
     n0, n1 = img.shape
     dtype = img.dtype
 
@@ -329,17 +384,19 @@ def vsnr2d(img, filters, maxit=20, xp=np, beta=10.0, norm=True, cvg_threshold=0,
         img = (img - vmin) / (vmax - vmin)
 
     u0 = img.flatten()
-    u = xp.zeros_like(u0)
+    u = xp_copy.zeros_like(u0)
 
     # calculation
-    u, cvg_criterias = compute_vsnr(filters, u0, n0, n1, maxit, beta, u0.max(), xp, cvg_threshold=cvg_threshold)
+    u, cvg_criterias = compute_vsnr(filters, u0, n0, n1, maxit, beta, u0.max(), xp_copy, cvg_threshold=cvg_threshold)
 
     # reshaping
-    img_corr = xp.array(u).reshape(n0, n1)
+    img_corr = xp_copy.array(u).reshape(n0, n1)
 
     if norm:
-        img_corr = xp.clip(img_corr, 0, 1)
-        img_corr = (img_corr - img_corr.min()) / (img_corr.max() - img_corr.min())
+        img_corr = xp_copy.clip(img_corr, 0, 1)
+        img_corr = (img_corr - img_corr.min()) / (
+            img_corr.max() - img_corr.min()
+        )
         img_corr = vmin + img_corr * (vmax - vmin)
 
     # cast to original dtype
@@ -347,5 +404,5 @@ def vsnr2d(img, filters, maxit=20, xp=np, beta=10.0, norm=True, cvg_threshold=0,
 
     if return_cvg:
         return img_corr, cvg_criterias
-    
+
     return img_corr
