@@ -44,7 +44,7 @@ n = 20   # Number of iterations
 xp = np     # numpy or cupy
 
 # Compute VSNR using numpy or cupy
-img_corr_py = vsnr2d(img, filters, nite=n, xp=xp)
+img_corr_py = vsnr2d(img, filters, maxit=n, xp=xp)
 ```
 
 And for CUDA:

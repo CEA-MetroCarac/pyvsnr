@@ -276,7 +276,7 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     return u, cvg_criterias
 
 
-def vsnr2d(img, filters, nite=20, xp=np, beta=10.0, norm=True, cvg_threshold=0, return_cvg=False):
+def vsnr2d(img, filters, maxit=20, xp=np, beta=10.0, norm=True, cvg_threshold=0, return_cvg=False):
     r"""
     Calculate the corrected image using the 2D-VSNR algorithm in libvsnr2d.dll
 
@@ -299,7 +299,7 @@ def vsnr2d(img, filters, nite=20, xp=np, beta=10.0, norm=True, cvg_threshold=0, 
         For further informations, see :
         https://www.math.univ-toulouse.fr/~weiss/Codes/VSNR/Documentation_VSNR_V2_Fiji.pdf
 
-    nite: int, optional
+    maxit: int, optional
         Number of iterations in the denoising processing
     beta: float
         The regularization parameter in the VSNR model. Controls the trade-off between the data
@@ -332,7 +332,7 @@ def vsnr2d(img, filters, nite=20, xp=np, beta=10.0, norm=True, cvg_threshold=0, 
     u = xp.zeros_like(u0)
 
     # calculation
-    u, cvg_criterias = compute_vsnr(filters, u0, n0, n1, nite, beta, u0.max(), xp, cvg_threshold=cvg_threshold)
+    u, cvg_criterias = compute_vsnr(filters, u0, n0, n1, maxit, beta, u0.max(), xp, cvg_threshold=cvg_threshold)
 
     # reshaping
     img_corr = xp.array(u).reshape(n0, n1)
