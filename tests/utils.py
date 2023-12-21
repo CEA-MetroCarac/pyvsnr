@@ -49,7 +49,7 @@ def measure_vsnr_cupy(img, filters, nite=20, beta=10.0, norm=True):
     img_corr_cupy = measure_vsnr(
         vsnr2d, img, filters, nite=nite, beta=beta, xp=cp, norm=norm
     )
-    return img_corr_cupy
+    return img_corr_cupy.get()
 
 
 def measure_vsnr_numpy(img, filters, nite=20, beta=10.0, norm=True):

@@ -706,7 +706,7 @@ def test_vsnr_admm():
     # gpsi=gpsi.reshape(64,64)
     # gu=gu.reshape(64,64)
 
-    gu = vsnr_admm(gu0, gpsi, n0, n1, nit, beta, xp)
+    gu, cvg_dummy = vsnr_admm(gu0, gpsi, n0, n1, nit, beta, xp)
 
     gu_kernel = xp.loadtxt(
         DIRNAME / "TEST_VSNR_ADMM/out.txt", dtype=xp.float32
@@ -764,6 +764,3 @@ def test_original_img_preserved():
     vsnr2d_cuda(img, filters, nite=maxit)
 
     assert xp.array_equal(img, img_copy)
-
-
-

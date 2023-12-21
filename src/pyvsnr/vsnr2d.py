@@ -99,7 +99,7 @@ def setd2(n, n1, xp):
     return d2
 
 
-def compute_vsnr(filters, u0, n0, n1, nit, beta, vmax, xp):
+def compute_vsnr(filters, u0, n0, n1, nit, beta, vmax, xp, cvg_threshold):
     """ Calculate the corrected image using the 2D-VSNR algorithm """
     n = n0 * n1
     gu = xp.zeros((n,), dtype=xp.float32)
@@ -113,13 +113,13 @@ def compute_vsnr(filters, u0, n0, n1, nit, beta, vmax, xp):
     gpsi = create_filters(filters, gu0, n0, n1, xp)
 
     # 3. Denoises the image
-    gu = vsnr_admm(gu0, gpsi, n0, n1, nit, beta, xp)
+    gu, cvg_criterias = vsnr_admm(gu0, gpsi, n0, n1, nit, beta, xp, cvg_threshold=cvg_threshold)
 
     # 4. Copies the result to u
     gu = xp.multiply(gu, vmax)
     u = xp.copy(gu)
 
-    return u
+    return u, cvg_criterias
 
 
 def create_filters(filters, gu0, n0, n1, xp):
@@ -178,7 +178,7 @@ def create_filters(filters, gu0, n0, n1, xp):
     return gpsi
 
 
-def vsnr_admm(u0, psi, n0, n1, nit, beta, xp):
+def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     """ Denoise the image u0 using the VSNR algorithm. """
     n = n0 * n1
     # m=n0*(n1//2+1)
@@ -222,7 +222,11 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp):
     # // Computes fphi
     fphi = compute_phi(fphi1, fphi2, beta, xp)
 
-    for _ in range(nit):
+    cvg_criteria=1000.
+    cvg_criterias=[]
+    i=0
+    fx_old=0
+    while i<nit and cvg_criteria>cvg_threshold:
         #     // -------------------------------------------------------------
         #     // First step, x update : (I+beta ATA)x = AT (-lambda+beta*ATy)
         #     // -------------------------------------------------------------
@@ -257,16 +261,22 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp):
         lambda1 = lambda1 + xp.multiply(beta, xp.subtract(tmp1, y1))
         lambda2 = lambda2 + xp.multiply(beta, xp.subtract(tmp2, y2))
 
+        if i!=0:
+            cvg_criteria = float(xp.max(xp.abs(fx - fx_old))/xp.max(xp.abs(fx)))
+            cvg_criterias.append(cvg_criteria)
+        fx_old=fx
+        i+=1
+    
     # // Last but not the least : u = u0 - (psi * x)
     ftmp1 = xp.multiply(fx, fpsi)
     u = xp.fft.ifft2(ftmp1.reshape(n0, n1), norm="forward").flatten().real
     u = xp.divide(u, n)
     u = xp.subtract(u0, u)
 
-    return u
+    return u, cvg_criterias
 
 
-def vsnr2d(img, filters, nite=20, xp=np, beta=10.0, norm=True):
+def vsnr2d(img, filters, nite=20, xp=np, beta=10.0, norm=True, cvg_threshold=0, return_cvg=False):
     r"""
     Calculate the corrected image using the 2D-VSNR algorithm in libvsnr2d.dll
 
@@ -301,6 +311,8 @@ def vsnr2d(img, filters, nite=20, xp=np, beta=10.0, norm=True):
     norm: bool, optional
         If True, the image is normalized before processing and the output
         image is renormalized to the original range
+    return_cvg: bool, optional
+        If True, the function returns the convergence criteria for each iteration
 
     Returns
     -------
@@ -320,7 +332,7 @@ def vsnr2d(img, filters, nite=20, xp=np, beta=10.0, norm=True):
     u = xp.zeros_like(u0)
 
     # calculation
-    u = compute_vsnr(filters, u0, n0, n1, nite, beta, u0.max(), xp)
+    u, cvg_criterias = compute_vsnr(filters, u0, n0, n1, nite, beta, u0.max(), xp, cvg_threshold=cvg_threshold)
 
     # reshaping
     img_corr = xp.array(u).reshape(n0, n1)
@@ -333,4 +345,7 @@ def vsnr2d(img, filters, nite=20, xp=np, beta=10.0, norm=True):
     # cast to original dtype
     img_corr = img_corr.astype(dtype)
 
+    if return_cvg:
+        return img_corr, cvg_criterias
+    
     return img_corr
