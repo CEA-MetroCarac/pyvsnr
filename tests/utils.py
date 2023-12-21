@@ -46,7 +46,7 @@ def measure_vsnr_cupy(img, filters, maxit=20, beta=10.0, norm=True):
     img_corr_cupy = measure_vsnr(
         img, filters, algo='cupy', maxit=maxit, beta=beta, norm=norm
     )
-    return img_corr_cupy.get()
+    return img_corr_cupy
 
 
 def measure_vsnr_numpy(img, filters, maxit=20, beta=10.0, norm=True):
@@ -59,14 +59,13 @@ def measure_vsnr_numpy(img, filters, maxit=20, beta=10.0, norm=True):
 
 def print_max_diff(img_corr_py, img_corr_cuda, xp):
     """ Print the maximum difference between the CUDA and Python implementations """
-    difference = xp.abs(
-        xp.asarray(img_corr_cuda) - xp.asarray(img_corr_py)
-    ).max()
+    difference = np.abs(img_corr_cuda - img_corr_py).max()
+
     print(
         f"Greatest difference between CUDA and {xp.__name__}:"
         f" {format(difference)}"
     )
-    assert xp.allclose(
+    assert np.allclose(
         img_corr_cuda, img_corr_py, atol=1e-2 # usually 1e-4 but if image is in 255 range it is 1e-2
     ), "CUDA and Python implementations are not equal"
 
@@ -205,8 +204,6 @@ def peak_signal_noise_ratio(image_true, image_test, *, data_range=None):
 
 def print_psnr(img, noisy_img, img_corr_py, img_corr_cuda):
     """ Print the PSNR of the noisy image, the CUDA corrected image and the Python """
-    if isinstance(img_corr_py, cp.ndarray):
-        img_corr_py = img_corr_py.get()
 
     psnr_noisy = peak_signal_noise_ratio(img, noisy_img)
     psnr_corrected_cuda = peak_signal_noise_ratio(img, img_corr_cuda)
@@ -232,9 +229,6 @@ def print_psnr(img, noisy_img, img_corr_py, img_corr_cuda):
 def plot_results(
         img, noisy_img, img_corr_py, img_corr_cuda, xp, save_plots=False, title="fig.png", vmin=0, vmax=1):
     """ Plot the original image, the noisy image, the Python corrected image and """
-
-    if isinstance(img_corr_py, cp.ndarray):
-        img_corr_py = cp.asnumpy(img_corr_py)
 
     plt.figure(figsize=(15, 5))
     plt.subplot(1, 4, 1)

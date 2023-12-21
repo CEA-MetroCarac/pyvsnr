@@ -5,17 +5,18 @@ It contains several improvements in terms of performance and memory usage.
 """
 import numpy as np
 from .vsnr2d_cuda import get_dll, vsnr2d_cuda
-xp = np
 
 # determine the algo to use for auto mode
 # 1. cupy; 2. cuda; 3. numpy
+CUDA_AVAILABLE = False
+CUPY_AVAILABLE = False
 try:
     import cupy as cp
-    xp = cp
+    CUPY_AVAILABLE = True
 except ImportError:
     try:
         get_dll()
-        cuda_available = True
+        CUDA_AVAILABLE = True
     except:
         pass
 
@@ -301,6 +302,51 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
 
     return u, cvg_criterias
 
+def vsnr2d_py(
+    img,
+    filters,
+    maxit=20,
+    xp=np,
+    beta=10.0,
+    norm=True,
+    cvg_threshold=0,
+    return_cvg=False,
+):
+    img = xp.asarray(img)
+    n0, n1 = img.shape
+    dtype = img.dtype
+
+    vmin, vmax = img.min(), img.max()
+
+    if norm:
+        img = (img - vmin) / (vmax - vmin)
+
+    u0 = img.flatten()
+    u = xp.zeros_like(u0)
+
+    # calculation
+    u, cvg_criterias = compute_vsnr(filters, u0, n0, n1, maxit, beta, u0.max(), xp, cvg_threshold=cvg_threshold)
+
+    # reshaping
+    img_corr = xp.array(u).reshape(n0, n1)
+
+    if norm:
+        img_corr = xp.clip(img_corr, 0, 1)
+        img_corr = (img_corr - img_corr.min()) / (
+            img_corr.max() - img_corr.min()
+        )
+        img_corr = vmin + img_corr * (vmax - vmin)
+
+    # cast to original dtype
+    img_corr = img_corr.astype(dtype)
+
+    if xp == cp:
+        img_corr = img_corr.get()
+
+    if return_cvg:
+        return img_corr, cvg_criterias
+
+    return img_corr
 
 def vsnr2d(
     img,
@@ -357,52 +403,24 @@ def vsnr2d(
     img_corr: numpy.ndarray((n0, n1))
         The corrected image
     """
-    xp_copy = xp # this is to avoid using global variable
 
     if algo == 'auto':
-        if xp == np and cuda_available:
-            return vsnr2d_cuda(img, filters, nite=maxit, beta=beta, nblocks='auto', norm=norm)
-    elif algo == 'cupy':
-        try :
-            xp_copy = cp
-        except:
-            raise ImportError("cupy is not installed")
+        if CUPY_AVAILABLE:
+            algo = 'cupy'
+        elif CUDA_AVAILABLE:
+            algo = 'cuda'
+        else:
+            algo = 'numpy'
+
+    
+    if algo == 'cupy':
+        return vsnr2d_py(img, filters, maxit=maxit, xp=cp, beta=beta, norm=norm, cvg_threshold=cvg_threshold, return_cvg=return_cvg)
+
     elif algo == 'cuda':
         return vsnr2d_cuda(img, filters, nite=maxit, beta=beta, nblocks='auto', norm=norm)
+    
     elif algo == 'numpy':
-        xp_copy = np
+        return vsnr2d_py(img, filters, maxit=maxit, xp=np, beta=beta, norm=norm, cvg_threshold=cvg_threshold, return_cvg=return_cvg)
+    
     else:
-        raise ValueError("algo must be 'auto', 'cupy', 'cuda', or 'numpy'")
-
-    img = xp_copy.asarray(img)
-    n0, n1 = img.shape
-    dtype = img.dtype
-
-    vmin, vmax = img.min(), img.max()
-
-    if norm:
-        img = (img - vmin) / (vmax - vmin)
-
-    u0 = img.flatten()
-    u = xp_copy.zeros_like(u0)
-
-    # calculation
-    u, cvg_criterias = compute_vsnr(filters, u0, n0, n1, maxit, beta, u0.max(), xp_copy, cvg_threshold=cvg_threshold)
-
-    # reshaping
-    img_corr = xp_copy.array(u).reshape(n0, n1)
-
-    if norm:
-        img_corr = xp_copy.clip(img_corr, 0, 1)
-        img_corr = (img_corr - img_corr.min()) / (
-            img_corr.max() - img_corr.min()
-        )
-        img_corr = vmin + img_corr * (vmax - vmin)
-
-    # cast to original dtype
-    img_corr = img_corr.astype(dtype)
-
-    if return_cvg:
-        return img_corr, cvg_criterias
-
-    return img_corr
+        raise ValueError("algo must be 'cupy', 'cuda', or 'numpy'")
