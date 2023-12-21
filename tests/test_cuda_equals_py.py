@@ -727,12 +727,8 @@ def test_cuda_equals_cupy_numpy():
 
     img = stripes_addition(img, 0.2)
 
-    img_corr_py = vsnr2d(
-        img, filters, maxit=maxit, xp=xp
-    )
-    img_corr_cuda = vsnr2d_cuda(
-        img, filters, maxit=maxit
-    )
+    img_corr_py = vsnr2d(img, filters, maxit=maxit, xp=xp)
+    img_corr_cuda = vsnr2d_cuda(img, filters, nite=maxit)
 
     xp.testing.assert_allclose(img_corr_cuda, img_corr_py, atol=1e-3)
 
@@ -746,7 +742,7 @@ def test_data_min_max_preserved():
     img = stripes_addition(img, 0.2)
 
     img_corr = vsnr2d(img, filters, maxit=maxit, xp=xp)
-    img_corr_cuda = vsnr2d_cuda(img, filters, maxit=maxit)
+    img_corr_cuda = vsnr2d_cuda(img, filters, nite=maxit)
 
     assert img_corr.min() == img_corr_cuda.min() == img.min()
     assert img_corr.max() == img_corr_cuda.max() == img.max()
@@ -761,6 +757,6 @@ def test_original_img_preserved():
     img_copy = img.copy()
 
     vsnr2d(img, filters, maxit=maxit, xp=xp)
-    vsnr2d_cuda(img, filters, maxit=maxit)
+    vsnr2d_cuda(img, filters, nite=maxit)
 
     assert xp.array_equal(img, img_copy)
