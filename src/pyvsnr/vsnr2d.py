@@ -340,8 +340,12 @@ def vsnr2d_py(
     # cast to original dtype
     img_corr = img_corr.astype(dtype)
 
-    if xp == cp:
-        img_corr = img_corr.get()
+    # Handle cupy to numpy conversion if needed
+    try:
+        if xp == cp:
+            img_corr = img_corr.get()
+    except:
+        pass
 
     if return_cvg:
         return img_corr, cvg_criterias

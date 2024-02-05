@@ -32,7 +32,7 @@ For **GPU** execution, a working CUDA installation is necessary wether you want 
 ## Usage
 <!-- To use `pyvsnr`, you can import the `vsnr2d` function from `vsnr2d.py` or the `vsnr2d_cuda` function from `vsnr2d_cuda.py`. -->
 
-Here is a basic example using numpy:
+Here is a basic example:
 
 ```python
 import numpy as np
@@ -40,17 +40,37 @@ from pyvsnr import vsnr2d
 
 img = np.random.random((100, 100))  # Input image
 filters = [{'name':'Dirac', 'noise_level':0.35}]  # List of filters
-n = 20   # Number of iterations  
 
-# Compute VSNR using numpy or cupy
-img_corr_py = vsnr2d(img, filters, maxit=n, algo='numpy')
+img_corr_py = vsnr2d(img, filters) # Compute VSNR
 ```
 
-And for CUDA:
+<!-- explanation of maxit and algo choice -->
+
+By default, the `vsnr2d` function uses auto detection to determine whether to use the CPU or GPU implementation. If CuPy is installed, it will use it, otherwise it will try to use the CUDA implementation. If neither are available, it will fall back to the NumPy CPU implementation.
+
+If you want to choose the algorithm to use, you can do so using the `algo` argument (possible values are `'auto'`, `'numpy'`, `'cupy'` or `'cuda'`) :
 
 ```python
 # Compute VSNR using CUDA
-img_corr_cuda = vsnr2d(img, filters, nite=n, algo='cuda')
+img_corr_cuda = vsnr2d(img, filters, maxit=n, algo='cuda')
+```
+
+To optimize the performance you could want to use the `cvg_threshold` parameter to set the convergence threshold. The default value is 0. To help you to choose the right value, you can use `return_cvg` parameter to get a graph of the convergence of the algorithm. You can also use the `maxit` parameter to set the maximum number of iterations. The default value is 20.
+
+NOTE: For now the `return_cvg` parameter is only available for Cupy and NumPy implementation.
+
+```python
+img_corr, cvg = vsnr2d(img, filters, algo="numpy", return_cvg=True)
+n = 15   # Number of iterations
+
+# Plot the convergence graph
+import matplotlib.pyplot as plt
+plt.figure(figsize=(15, 5))
+plt.semilogy(cvg)
+plt.xlabel('N Iteration')
+plt.ylabel('Cvg Criteria')
+plt.plot(cvg)
+plt.show()
 ```
 
 ## Examples
