@@ -52,7 +52,7 @@ If you want to choose the algorithm to use, you can do so using the `algo` argum
 
 ```python
 # Compute VSNR using CUDA
-img_corr_cuda = vsnr2d(img, filters, maxit=n, algo='cuda')
+img_corr_cuda = vsnr2d(img, filters, algo='cuda')
 ```
 
 To optimize the performance you could want to use the `cvg_threshold` parameter to set the convergence threshold. The default value is 0. To help you to choose the right value, you can use `return_cvg` parameter to get a graph of the convergence of the algorithm. You can also use the `maxit` parameter to set the maximum number of iterations. The default value is 20.
