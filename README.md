@@ -60,7 +60,7 @@ To optimize the performance you could want to use the `cvg_threshold` parameter 
 NOTE: For now the `return_cvg` parameter is only available for Cupy and NumPy implementation.
 
 ```python
-n = 15   # Number of iterations
+n = 15   # Maximum number of iterations
 img_corr, cvg = vsnr2d(img, filters, maxit=n, algo="numpy", return_cvg=True)
 
 # Plot the convergence graph
