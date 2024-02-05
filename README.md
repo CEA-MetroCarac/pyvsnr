@@ -1,6 +1,6 @@
 # pyvsnr
 
-![](tests/images/fib_sem_corr.png)
+![](https://raw.githubusercontent.com/CEA-MetroCarac/pyvsnr/main/tests/images/fib_sem_corr.png)
 
 ## Description
 
@@ -82,11 +82,11 @@ jupyter notebook tests/notebook.ipynb
 ```
 
 **Stripes removal example :**
-![camera_stripes](tests/images/camera_stripes.png)
+![camera_stripes](https://raw.githubusercontent.com/CEA-MetroCarac/pyvsnr/main/tests/images/camera_stripes.png)
 **Gaussian noise removal example :**
-![camera_stripes](tests/images/camera_gaussian.png)
+![camera_stripes](https://raw.githubusercontent.com/CEA-MetroCarac/pyvsnr/main/tests/images/camera_gaussian.png)
 **Curtains removal example :**
-![camera_stripes](tests/images/camera_curtains.png)
+![camera_stripes](https://raw.githubusercontent.com/CEA-MetroCarac/pyvsnr/main/tests/images/camera_curtains.png)
 
 <!-- PUT EXAMPLES IMAGES -->
 
