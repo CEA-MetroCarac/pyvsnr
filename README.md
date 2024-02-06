@@ -77,7 +77,8 @@ plt.show()
 ```
 ![](https://raw.githubusercontent.com/CEA-MetroCarac/pyvsnr/main/tests/images/cvg.png)
 
-<!-- Here for example, we can see that the algorithm converges after x iterations. -->
+Here for example, we could set the `cvg_threshold` to 1e-2. This would stop the algorithm after around 20 iterations, instead of 30.
+
 
 ## Examples
 
