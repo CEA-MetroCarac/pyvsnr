@@ -55,8 +55,8 @@ If you want to choose the algorithm to use, you can do so using the `algo` argum
 img_corr_cuda = vsnr2d(img, filters, algo='cuda')
 ```
 
-The `cvg_threshold` parameter is a stopping criterion for the iterative process.
-The default value is 0. It stops the algorithm when improvement between iterations falls below this value. This can impact the speed and quality of results.
+The `cvg_threshold` parameter is a stopping criterion based on the relative-change of the denoised image between successive iterations.
+The default value is 0. It stops the algorithm when relative-change between iterations falls below this threshold. This means that the solution has nearly stabilized, indicating that further iterations are unlikely to significantly improve the denoising result. Adjusting this parameter impact the speed and the quality of the results.
 
 Use `return_cvg=True` to visualize the algorithm's convergence. You can also set the maximum number of iterations with the `maxit` parameter, the default value is 20.
 
@@ -71,7 +71,7 @@ import matplotlib.pyplot as plt
 plt.figure(figsize=(15, 5))
 plt.semilogy(cvg)
 plt.xlabel('N Iteration')
-plt.ylabel('Cvg Criteria')
+plt.ylabel('Cvg Criterion')
 plt.plot(cvg)
 plt.show()
 ```

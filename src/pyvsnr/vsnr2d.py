@@ -128,7 +128,7 @@ def compute_vsnr(filters, u0, n0, n1, nit, beta, vmax, xp, cvg_threshold):
     gpsi = create_filters(filters, gu0, n0, n1, xp)
 
     # 3. Denoises the image
-    gu, cvg_criterias = vsnr_admm(
+    gu, cvg_criteria = vsnr_admm(
         gu0, gpsi, n0, n1, nit, beta, xp, cvg_threshold=cvg_threshold
     )
 
@@ -136,7 +136,7 @@ def compute_vsnr(filters, u0, n0, n1, nit, beta, vmax, xp, cvg_threshold):
     gu = xp.multiply(gu, vmax)
     u = xp.copy(gu)
 
-    return u, cvg_criterias
+    return u, cvg_criteria
 
 
 def create_filters(filters, gu0, n0, n1, xp):
@@ -243,11 +243,11 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     # // Computes fphi
     fphi = compute_phi(fphi1, fphi2, beta, xp)
 
-    cvg_criteria = 1000.0
-    cvg_criterias = []
+    cvg_criterion = 1000.0
+    cvg_criteria = []
     i = 0
     fx_old = 0
-    while i < nit and cvg_criteria > cvg_threshold:
+    while i < nit and cvg_criterion > cvg_threshold:
         #     // -------------------------------------------------------------
         #     // First step, x update : (I+beta ATA)x = AT (-lambda+beta*ATy)
         #     // -------------------------------------------------------------
@@ -287,10 +287,10 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
         lambda2 = lambda2 + xp.multiply(beta, xp.subtract(tmp2, y2))
 
         if i != 0:
-            cvg_criteria = float(
+            cvg_criterion = float(
                 xp.max(xp.abs(fx - fx_old)) / xp.max(xp.abs(fx))
             )
-            cvg_criterias.append(cvg_criteria)
+            cvg_criteria.append(cvg_criterion)
         fx_old = fx
         i += 1
 
@@ -300,7 +300,7 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     u = xp.divide(u, n)
     u = xp.subtract(u0, u)
 
-    return u, cvg_criterias
+    return u, cvg_criteria
 
 def vsnr2d_py(
     img,
@@ -325,7 +325,7 @@ def vsnr2d_py(
     u = xp.zeros_like(u0)
 
     # calculation
-    u, cvg_criterias = compute_vsnr(filters, u0, n0, n1, maxit, beta, u0.max(), xp, cvg_threshold=cvg_threshold)
+    u, cvg_criteria = compute_vsnr(filters, u0, n0, n1, maxit, beta, u0.max(), xp, cvg_threshold=cvg_threshold)
 
     # reshaping
     img_corr = xp.array(u).reshape(n0, n1)
@@ -348,7 +348,7 @@ def vsnr2d_py(
         pass
 
     if return_cvg:
-        return img_corr, cvg_criterias
+        return img_corr, cvg_criteria
 
     return img_corr
 
@@ -400,7 +400,7 @@ def vsnr2d(
         If True, the image is normalized before processing and the output
         image is renormalized to the original range
     return_cvg: bool, optional
-        If True, the function returns the convergence criteria for each iteration
+        If True, the function returns the convergence criterion for each iteration
 
     Returns
     -------
