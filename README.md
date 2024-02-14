@@ -58,9 +58,11 @@ img_corr_cuda = vsnr2d(img, filters, algo='cuda')
 The `cvg_threshold` parameter is a stopping criterion based on the relative-change of the denoised image between successive iterations.
 The default value is 0. It stops the algorithm when relative-change between iterations falls below this threshold. This means that the result has nearly stabilized, indicating that further iterations are unlikely to significantly improve the denoising result. Adjusting this parameter impact the speed and the quality of the results. Here is the formula used to compute the convergence criterion at iteration k:
 
-$$ CV_{k} = \frac{\operatorname\max|\Delta u_k - \Delta u_{k-1}|}{\max|\Delta u_k|} $$
-Where $\Delta u_{k}$ is the estimated noise of the image at iteration k, such as $$ u_k = u_0 - \Delta u_k $$
+$$ CV_{k} = \frac{\max|\Delta u_k - \Delta u_{k-1}|}{\max|\Delta u_k|} $$
 
+Where $\Delta u_{k}$ is the estimated noise of the image at iteration k, such as
+
+$$ u_k = u_0 - \Delta u_k $$
 
 Use `return_cvg=True` to visualize the algorithm's convergence. You can also set the maximum number of iterations with the `maxit` parameter, the default value is 20.
 
