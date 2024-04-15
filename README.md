@@ -12,6 +12,12 @@
 pip install pyvsnr
 ```
 
+or for the latest version:
+
+```bash
+pip install git+https://github.com/CEA-MetroCarac/pyvsnr.git
+```
+
 In case of problem during CUDA execution (typically OSError or 'access memory error'),
 it may be necessary to **recompile** the shared library from source (see below).
 
@@ -101,7 +107,7 @@ jupyter notebook tests/notebook.ipynb
 **Curtains removal example :**
 ![camera_stripes](https://raw.githubusercontent.com/CEA-MetroCarac/pyvsnr/main/tests/images/camera_curtains.png)
 
-<!-- PUT EXAMPLES IMAGES -->
+You can also create your own tests using `from pyvsnr.utils import curtains_addition, stripes_addition, add_gaussian_noise`
 
 ## Shared library re-compilation
 

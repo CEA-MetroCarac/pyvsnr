@@ -20,8 +20,7 @@ from src.pyvsnr.vsnr2d import (
 )
 
 from src.pyvsnr import vsnr2d, vsnr2d_cuda
-
-from tests.utils import stripes_addition
+from src.pyvsnr.utils import stripes_addition
 
 DIRNAME = pathlib.Path(__file__).parent
 PRECOMPILED_PATH = DIRNAME.parent / "src" / "pyvsnr" / "precompiled"
