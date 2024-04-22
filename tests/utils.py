@@ -12,7 +12,7 @@ from skimage._shared.utils import (
 )
 from skimage.util.dtype import dtype_range
 
-from src.pyvsnr import vsnr2d, vsnr2d_cuda
+from src.pyvsnr import vsnr2d
 
 
 def measure_vsnr(
