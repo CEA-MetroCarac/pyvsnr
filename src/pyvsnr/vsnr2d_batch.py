@@ -316,7 +316,7 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     return u, cvg_criteria
 
 def vsnr2d_py(
-    img,
+    imgs,
     filters,
     maxit=20,
     xp=np,
@@ -325,50 +325,50 @@ def vsnr2d_py(
     cvg_threshold=0,
     return_cvg=False,
 ):
-    img = xp.asarray(img)
-    batch_size, n0, n1 = img.shape
-    dtype = img.dtype
+    imgs = xp.asarray(imgs)
+    batch_size, n0, n1 = imgs.shape
+    dtype = imgs.dtype
 
-    vmin, vmax = img.min(axis=(1,2)), img.max(axis=(1,2))
+    vmin, vmax = imgs.min(axis=(1,2)), imgs.max(axis=(1,2))
 
     if norm:
-        img = (img - vmin[:, None, None]) / (vmax[:, None, None] - vmin[:, None, None])
+        imgs = (imgs - vmin[:, None, None]) / (vmax[:, None, None] - vmin[:, None, None])
         vmax_norm = xp.ones(batch_size)
     else:
         vmax_norm = vmax
 
-    u0 = img.reshape(batch_size, -1)
+    u0 = imgs.reshape(batch_size, -1)
     u = xp.zeros_like(u0)
 
     # calculation
     u, cvg_criteria = compute_vsnr(filters, u0, n0, n1, maxit, beta, vmax_norm, xp, cvg_threshold)
     # reshaping
-    img_corr = xp.array(u).reshape(batch_size, n0, n1)
+    imgs_corr = xp.array(u).reshape(batch_size, n0, n1)
 
     if norm:
-        img_corr = xp.clip(img_corr, 0, 1)
-        img_corr = (img_corr - img_corr.min(axis=(1,2))[:, None, None]) / (
-            img_corr.max(axis=(1,2))[:, None, None] - img_corr.min(axis=(1,2))[:, None, None]
+        imgs_corr = xp.clip(imgs_corr, 0, 1)
+        imgs_corr = (imgs_corr - imgs_corr.min(axis=(1,2))[:, None, None]) / (
+            imgs_corr.max(axis=(1,2))[:, None, None] - imgs_corr.min(axis=(1,2))[:, None, None]
         )
-        img_corr = vmin[:, None, None] + img_corr * (vmax[:, None, None] - vmin[:, None, None])
+        imgs_corr = vmin[:, None, None] + imgs_corr * (vmax[:, None, None] - vmin[:, None, None])
 
     # cast to original dtype
-    img_corr = img_corr.astype(dtype)
+    imgs_corr = imgs_corr.astype(dtype)
 
     # Handle cupy to numpy conversion if needed
     try:
         if xp == cp:
-            img_corr = img_corr.get()
+            imgs_corr = imgs_corr.get()
     except:
         pass
 
     if return_cvg:
-        return img_corr, cvg_criteria
+        return imgs_corr, cvg_criteria
 
-    return img_corr
+    return imgs_corr
 
 def vsnr2d_batch(
-    img,
+    imgs,
     filters,
     maxit=20,
     algo='auto',
@@ -388,8 +388,8 @@ def vsnr2d_batch(
 
     Parameters
     ----------
-    img: numpy.ndarray((n0, n1))
-        The image to process
+    imgs: numpy.ndarray((batch_size, n0, n1))
+        The images to process
     filters: list of dicts
         Dictionaries that contains filters definition.
         Example For a 'Dirac' filter:
@@ -419,8 +419,8 @@ def vsnr2d_batch(
 
     Returns
     -------
-    img_corr: numpy.ndarray((n0, n1))
-        The corrected image
+    imgs_corr: numpy.ndarray((batch_size, n0, n1))
+        The corrected images
     """
 
     if algo == 'auto':
@@ -433,13 +433,13 @@ def vsnr2d_batch(
 
     
     if algo == 'cupy':
-        return vsnr2d_py(img, filters, maxit=maxit, xp=cp, beta=beta, norm=norm, cvg_threshold=cvg_threshold, return_cvg=return_cvg)
+        return vsnr2d_py(imgs, filters, maxit=maxit, xp=cp, beta=beta, norm=norm, cvg_threshold=cvg_threshold, return_cvg=return_cvg)
 
     elif algo == 'cuda':
-        return vsnr2d_cuda(img, filters, nite=maxit, beta=beta, nblocks='auto', norm=norm)
+        return vsnr2d_cuda(imgs, filters, nite=maxit, beta=beta, nblocks='auto', norm=norm)
     
     elif algo == 'numpy':
-        return vsnr2d_py(img, filters, maxit=maxit, xp=np, beta=beta, norm=norm, cvg_threshold=cvg_threshold, return_cvg=return_cvg)
+        return vsnr2d_py(imgs, filters, maxit=maxit, xp=np, beta=beta, norm=norm, cvg_threshold=cvg_threshold, return_cvg=return_cvg)
     
     else:
         raise ValueError("algo must be 'cupy', 'cuda', or 'numpy'")

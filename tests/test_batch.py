@@ -29,8 +29,8 @@ def test_create_filters_batch():
     u0 = u0.reshape(512, 512)
 
     # CREATE_FILTERS
-    gu0 = u0.copy()
-    gu0_batch = np.repeat(gu0[np.newaxis, :], 10, axis=0)
+    gu0 = xp.asarray(u0.copy())
+    gu0_batch = xp.repeat(gu0[xp.newaxis, :], 10, axis=0)
     gpsi1 = create_filters(
         [{"name": "Dirac", "noise_level": 10}], gu0, 512, 512, xp
     )
@@ -39,7 +39,7 @@ def test_create_filters_batch():
     )
 
     for i in range(10):
-        assert np.allclose(gpsi[i], gpsi1)
+        assert xp.allclose(gpsi[i], gpsi1)
 
 
 def test_batch():
@@ -50,7 +50,7 @@ def test_batch():
         # convert numpy array to cupy array
         gu0 = cp.asarray(gu0)
 
-    gu0_batch = xp.repeat(gu0[np.newaxis, :], 10, axis=0)
+    gu0_batch = xp.repeat(gu0[xp.newaxis, :], 10, axis=0)
     filters = [{"name": "Dirac", "noise_level": 10}]
     print(gu0.shape, gu0_batch.shape)
 
