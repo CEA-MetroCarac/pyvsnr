@@ -98,7 +98,7 @@ def test_vsnr2d_batch_random_imgs():
 
     for i in range(10):
         #print(np.max(np.abs(gu0_individually[i] - gu0_batch[i])))
-        assert xp.allclose(gu0_individually[i], gu0_batch[i], atol=1e-5) # This test pass only with atol 1e-5
+        assert xp.allclose(gu0_individually[i], gu0_batch[i], atol=1e-5) # TODO This test pass only with atol 1e-5
 
 def test_vsnr2d_batch_single_img():
     """ Test the batch processing """
