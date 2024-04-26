@@ -4,21 +4,16 @@ its a port of the original CUDA implementation to python using cupy.
 It contains several improvements in terms of performance and memory usage.
 """
 import numpy as np
-from .vsnr2d_cuda import get_dll, vsnr2d_cuda
 
 # determine the algo to use for auto mode
-# 1. cupy; 2. cuda; 3. numpy
-CUDA_AVAILABLE = False
+# 1. cupy; 2. numpy
+
 CUPY_AVAILABLE = False
 try:
     import cupy as cp
     CUPY_AVAILABLE = True
 except ImportError:
-    try:
-        get_dll()
-        CUDA_AVAILABLE = True
-    except:
-        pass
+    pass
 
 def compute_phi(fphi1, fphi2, beta, xp):
     """Compute the value of fphi based on the values of fphi1, fphi2, and beta."""
@@ -312,6 +307,10 @@ def vsnr2d_py(
     cvg_threshold=0,
     return_cvg=False,
 ):
+    # If imgs is a 2D array, add an extra dimension to make it a 3D array with one image
+    if len(imgs.shape) == 2:
+        imgs = imgs[np.newaxis, :, :]
+
     imgs = xp.asarray(imgs)
     batch_size, n0, n1 = imgs.shape
     dtype = imgs.dtype
@@ -413,20 +412,15 @@ def vsnr2d_batch(
     if algo == 'auto':
         if CUPY_AVAILABLE:
             algo = 'cupy'
-        elif CUDA_AVAILABLE:
-            algo = 'cuda'
         else:
             algo = 'numpy'
 
     
     if algo == 'cupy':
         return vsnr2d_py(imgs, filters, maxit=maxit, xp=cp, beta=beta, norm=norm, cvg_threshold=cvg_threshold, return_cvg=return_cvg)
-
-    elif algo == 'cuda':
-        return vsnr2d_cuda(imgs, filters, nite=maxit, beta=beta, nblocks='auto', norm=norm)
     
     elif algo == 'numpy':
         return vsnr2d_py(imgs, filters, maxit=maxit, xp=np, beta=beta, norm=norm, cvg_threshold=cvg_threshold, return_cvg=return_cvg)
     
     else:
-        raise ValueError("algo must be 'cupy', 'cuda', or 'numpy'")
+        raise ValueError("algo must be 'cupy', or 'numpy'")
