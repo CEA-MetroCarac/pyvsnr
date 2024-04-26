@@ -42,7 +42,7 @@ def test_create_filters_batch():
         assert xp.allclose(gpsi[i], gpsi1)
 
 
-def test_batch():
+def test_batch_vs_normal_same_img():
     """ Test the batch processing """
     gu0 = data.camera()
 
@@ -59,3 +59,23 @@ def test_batch():
 
     for i in range(10):
         assert xp.allclose(gu0_batch[i], gu0)
+
+def test_batch_vs_normal_random_imgs():
+    """ Test the batch processing """
+    gu0 = data.camera()
+
+    if xp == cp:
+        # convert numpy array to cupy array
+        gu0 = cp.asarray(gu0)
+
+    # Create a batch of 10 different images by adding an amount of random noise to each image
+    gu0_batch = xp.stack([gu0 + xp.random.normal(scale=10, size=gu0.shape) for _ in range(10)])
+
+    filters = [{"name": "Dirac", "noise_level": 10}]
+
+    gu0_individually = [vsnr2d(gu0, filters) for gu0 in gu0_batch]
+    gu0_batch = vsnr2d_batch(gu0_batch, filters)  
+
+    for i in range(10):
+        #print(np.max(np.abs(gu0_individually[i] - gu0_batch[i])))
+        assert xp.allclose(gu0_individually[i], gu0_batch[i], atol=1e-5)

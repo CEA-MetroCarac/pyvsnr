@@ -200,7 +200,7 @@ def create_filters(filters, gu0, n0, n1, xp):
         imax = xp.argmax(xp.abs(ftmp))
         max2 = ftmp[imax]
         nmax = max(max1, max2)
-        alpha = np.sqrt(n) * n**2 * nmax / (norm * eta)
+        alpha = xp.sqrt(n) * n**2 * nmax / (norm * eta)
 
         fsum = update_psi(
             fpsitemp, fsum, alpha, xp

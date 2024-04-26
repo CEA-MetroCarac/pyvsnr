@@ -74,7 +74,7 @@ def create_gabor(n0, n1, level, sigmax, sigmay, angle, phase, lambda_, xp):
     ) * xp.cos((x_theta * lambda_ / sigmax) + phase)
     psi = level * val / nn
 
-    return psi.ravel()
+    return psi.flatten()
 
 
 def update_y(d1u0, d2u0, tmp1, tmp2, lambda1, lambda2, beta, xp):
@@ -152,13 +152,13 @@ def create_filters(filters, gu0, n0, n1, xp):
     n = n0 * n1
     # d1=xp.array([-3-10j,-2+2j],dtype=xp.complex64) #test
     d1 = setd1(n, n1, xp)  # // d1[0] = 1; d1[n1-1] = -1;
-    fd1 = xp.fft.fft2(d1.reshape(n0, n1)).ravel()
+    fd1 = xp.fft.fft2(d1.reshape(n0, n1)).flatten()
     fd1 = xp.abs(fd1)  # // fd1 = |fd1|;
 
     # Computes d2 and fd2
     # d2=xp.array([5-1j,-4+2j],dtype=xp.complex64) #test
     d2 = setd2(n, n1, xp)  # // d2[0] = 1; d2[(n0-1)*n1] = -1;
-    fd2 = xp.fft.fft2(d2.reshape(n0, n1)).ravel()
+    fd2 = xp.fft.fft2(d2.reshape(n0, n1)).flatten()
     fd2 = xp.abs(fd2)
 
     # Computes PSI = sum_{i=1}^m |PSI_i|^2/alpha_i, where alpha_i is defined in the paper.
@@ -175,7 +175,7 @@ def create_filters(filters, gu0, n0, n1, xp):
             )
             eta = filt["noise_level"]
 
-        fpsitemp = xp.fft.fft2(psitemp.reshape(n0, n1)).ravel()
+        fpsitemp = xp.fft.fft2(psitemp.reshape(n0, n1)).flatten()
 
         fpsitemp = xp.square(xp.abs(fpsitemp))  # // fpsitemp = |fpsitemp|^2;)
 
@@ -194,7 +194,7 @@ def create_filters(filters, gu0, n0, n1, xp):
         )  # fsum += |fpsitemp|^2 / alpha_i;
 
     fsum = xp.sqrt(fsum)  # // fsum = sqrtf(fsum);
-    gpsi = xp.fft.ifft2(fsum.reshape(n0, n1), norm="forward").ravel()
+    gpsi = xp.fft.ifft2(fsum.reshape(n0, n1), norm="forward").flatten()
 
     return gpsi
 
@@ -211,28 +211,28 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     tmp1 = xp.zeros((n,), dtype=xp.float32)
     tmp2 = xp.zeros((n,), dtype=xp.float32)
 
-    fu0 = xp.fft.fft2(u0.reshape(n0, n1)).ravel()
-    fpsi = xp.fft.fft2(psi.reshape(n0, n1)).ravel()
+    fu0 = xp.fft.fft2(u0.reshape(n0, n1)).flatten()
+    fpsi = xp.fft.fft2(psi.reshape(n0, n1)).flatten()
 
     # // Computes d1 and fd1
     d1 = setd1(n, n1, xp)  # // d1[0] = 1; d1[n1-1] = -1;
-    fd1 = xp.fft.fft2(d1.reshape(n0, n1)).ravel()
+    fd1 = xp.fft.fft2(d1.reshape(n0, n1)).flatten()
 
     # // Computes d2 and fd2
     d2 = setd2(n, n1, xp)  # // d2[0] = 1; d2[(n0-1)*n1] = -1;
-    fd2 = xp.fft.fft2(d2.reshape(n0, n1)).ravel()
+    fd2 = xp.fft.fft2(d2.reshape(n0, n1)).flatten()
 
     # // Computes d1u0
     ftmp1 = xp.multiply(fd1, fu0)
     d1u0 = xp.real(
-        xp.fft.ifft2(ftmp1.reshape(n0, n1), norm="forward").ravel()
+        xp.fft.ifft2(ftmp1.reshape(n0, n1), norm="forward").flatten()
     )
     d1u0 = xp.divide(d1u0, n)  # d1u0=normalize_array(d1u0)
 
     # // Computes d2u0
     ftmp2 = xp.multiply(fd2, fu0)
     d2u0 = xp.real(
-        xp.fft.ifft2(ftmp2.reshape(n0, n1), norm="forward").ravel()
+        xp.fft.ifft2(ftmp2.reshape(n0, n1), norm="forward").flatten()
     )
     d2u0 = xp.divide(d2u0, n)
 
@@ -253,8 +253,8 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
         #     // -------------------------------------------------------------
         tmp1 = xp.subtract(xp.multiply(y1, beta), lambda1)
         tmp2 = xp.subtract(xp.multiply(y2, beta), lambda2)
-        ftmp1 = xp.fft.fft2(tmp1.reshape(n0, n1)).ravel()
-        ftmp2 = xp.fft.fft2(tmp2.reshape(n0, n1)).ravel()
+        ftmp1 = xp.fft.fft2(tmp1.reshape(n0, n1)).flatten()
+        ftmp2 = xp.fft.fft2(tmp2.reshape(n0, n1)).flatten()
 
         # Computes w = conj(u) * v
         ftmp1 = xp.multiply(xp.conj(fphi1), ftmp1)
@@ -270,10 +270,10 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
         ftmp1 = xp.multiply(fphi1, fx)
         ftmp2 = xp.multiply(fphi2, fx)
         tmp1 = (
-            xp.fft.ifft2(ftmp1.reshape(n0, n1), norm="forward").ravel().real
+            xp.fft.ifft2(ftmp1.reshape(n0, n1), norm="forward").flatten().real
         )
         tmp2 = (
-            xp.fft.ifft2(ftmp2.reshape(n0, n1), norm="forward").ravel().real
+            xp.fft.ifft2(ftmp2.reshape(n0, n1), norm="forward").flatten().real
         )
         tmp1 = xp.divide(tmp1, n)  # normalize_array(tmp1)
         tmp2 = xp.divide(tmp2, n)  # normalize_array(tmp2)
@@ -296,7 +296,7 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
 
     # // Last but not the least : u = u0 - (psi * x)
     ftmp1 = xp.multiply(fx, fpsi)
-    u = xp.fft.ifft2(ftmp1.reshape(n0, n1), norm="forward").ravel().real
+    u = xp.fft.ifft2(ftmp1.reshape(n0, n1), norm="forward").flatten().real
     u = xp.divide(u, n)
     u = xp.subtract(u0, u)
 
@@ -321,7 +321,7 @@ def vsnr2d_py(
     if norm:
         img = (img - vmin) / (vmax - vmin)
 
-    u0 = img.ravel()
+    u0 = img.flatten()
     u = xp.zeros_like(u0)
 
     # calculation
