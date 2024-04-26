@@ -221,19 +221,17 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     lambda2 = xp.zeros((batch_size, n), dtype=xp.float32)
     y1 = xp.zeros((batch_size, n), dtype=xp.float32)
     y2 = xp.zeros((batch_size, n), dtype=xp.float32)
-    tmp1 = xp.zeros((batch_size, n), dtype=xp.float32)
-    tmp2 = xp.zeros((batch_size, n), dtype=xp.float32)
 
     fu0 = xp.fft.fft2(u0.reshape(batch_size, n0, n1)).reshape(batch_size, -1)
     fpsi = xp.fft.fft2(psi.reshape(batch_size, n0, n1)).reshape(batch_size, -1)
 
-    # // Computes d1 and fd1
-    d1 = setd1(n, n1, xp)  # // d1[0] = 1; d1[n1-1] = -1;
-    fd1 = xp.fft.fft2(d1.reshape(n0, n1)).ravel()
+    # // Computes fd1
+    fd1 = setd1(n, n1, xp)  # // d1[0] = 1; d1[n1-1] = -1;
+    fd1 = xp.fft.fft2(fd1.reshape(n0, n1)).ravel()
 
-    # // Computes d2 and fd2
-    d2 = setd2(n, n1, xp)  # // d2[0] = 1; d2[(n0-1)*n1] = -1;
-    fd2 = xp.fft.fft2(d2.reshape(n0, n1)).ravel()
+    # // Computes fd2
+    fd2 = setd2(n, n1, xp)  # // d2[0] = 1; d2[(n0-1)*n1] = -1;
+    fd2 = xp.fft.fft2(fd2.reshape(n0, n1)).ravel()
 
     # // Computes d1u0
     ftmp1 = xp.multiply(fd1, fu0)
@@ -261,13 +259,11 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     i = 0
     fx_old = xp.zeros((batch_size, n), dtype=xp.float32)
     while i < nit and cvg_criterion > cvg_threshold:
-        #     // -------------------------------------------------------------
-        #     // First step, x update : (I+beta ATA)x = AT (-lambda+beta*ATy)
-        #     // -------------------------------------------------------------
-        tmp1 = xp.subtract(xp.multiply(y1, beta), lambda1)
-        tmp2 = xp.subtract(xp.multiply(y2, beta), lambda2)
-        ftmp1 = xp.fft.fft2(tmp1.reshape(batch_size, n0, n1)).reshape(batch_size, -1)
-        ftmp2 = xp.fft.fft2(tmp2.reshape(batch_size, n0, n1)).reshape(batch_size, -1)
+        # First step, x update : (I+beta ATA)x = AT (-lambda+beta*ATy)
+        ftmp1 = xp.subtract(xp.multiply(y1, beta), lambda1)
+        ftmp2 = xp.subtract(xp.multiply(y2, beta), lambda2)
+        ftmp1 = xp.fft.fft2(ftmp1.reshape(batch_size, n0, n1)).reshape(batch_size, -1)
+        ftmp2 = xp.fft.fft2(ftmp2.reshape(batch_size, n0, n1)).reshape(batch_size, -1)
 
         # Computes w = conj(u) * v
         ftmp1 = xp.multiply(xp.conj(fphi1), ftmp1)
@@ -280,24 +276,21 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
         #     // Second step y update : y = prox_{f1/beta}(Ax+lambda/beta)
         #     // --------------------------------------------------------
 
+        # Second step y update : y = prox_{f1/beta}(Ax+lambda/beta)
         ftmp1 = xp.multiply(fphi1, fx)
         ftmp2 = xp.multiply(fphi2, fx)
-        tmp1 = (
-            xp.fft.ifft2(ftmp1.reshape(batch_size, n0, n1), norm="forward").reshape(batch_size, -1).real
-        )
-        tmp2 = (
-            xp.fft.ifft2(ftmp2.reshape(batch_size, n0, n1), norm="forward").reshape(batch_size, -1).real
-        )
-        tmp1 = xp.divide(tmp1, n)  # normalize_array(tmp1)
-        tmp2 = xp.divide(tmp2, n)  # normalize_array(tmp2)
+        ftmp1 = xp.fft.ifft2(ftmp1.reshape(batch_size, n0, n1), norm="forward").reshape(batch_size, -1).real
+        ftmp2 = xp.fft.ifft2(ftmp2.reshape(batch_size, n0, n1), norm="forward").reshape(batch_size, -1).real
+        ftmp1 = xp.divide(ftmp1, n)  # normalize_array(tmp1)
+        ftmp2 = xp.divide(ftmp2, n)  # normalize_array(tmp2)
 
-        y1, y2 = update_y(d1u0, d2u0, tmp1, tmp2, lambda1, lambda2, beta, xp)
+        y1, y2 = update_y(d1u0, d2u0, ftmp1, ftmp2, lambda1, lambda2, beta, xp)
 
         #     // --------------------------
         #     // Third step lambda update
         #     // --------------------------
-        lambda1 = lambda1 + xp.multiply(beta, xp.subtract(tmp1, y1))
-        lambda2 = lambda2 + xp.multiply(beta, xp.subtract(tmp2, y2))
+        lambda1 = lambda1 + xp.multiply(beta, xp.subtract(ftmp1, y1))
+        lambda2 = lambda2 + xp.multiply(beta, xp.subtract(ftmp2, y2))
 
         if i != 0:
             cvg_criterion = float(
