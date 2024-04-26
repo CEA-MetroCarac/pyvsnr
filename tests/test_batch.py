@@ -111,4 +111,4 @@ def test_vsnr2d_batch_single_img():
     gu0_individually = vsnr2d(img, filters)
     gu0_batch = vsnr2d_batch(img, filters)  
 
-    assert xp.allclose(gu0_individually, gu0_batch, atol=1e-5) # This test pass only with atol 1e-5
+    assert xp.allclose(gu0_individually, gu0_batch)
