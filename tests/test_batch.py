@@ -37,13 +37,13 @@ def test_create_filters_batch():
     )
 
     for i in range(10):
-        assert xp.allclose(gpsi[i], gpsi1)
+        assert xp.allclose(gpsi[i].ravel(), gpsi1)
         
 def test_admm_batch():
     """ Test the vsnr_admm_batch function """
 
     u0 = data.camera()
-    u0 = u0.reshape(512, 512).ravel()
+    u0 = u0.reshape(512, 512)
 
     # CREATE_FILTERS
     gu0 = xp.asarray(u0.copy())
@@ -56,11 +56,11 @@ def test_admm_batch():
     beta = 1.0
     cvg_threshold = 0.01
     
-    gu0_individually = [vsnr_admm(gu0, create_filters(filters, gu0, 512, 512, xp), 512, 512, nit, beta, xp, cvg_threshold=cvg_threshold)[0] for gu0 in gu0_batch]
+    gu0_individually = [vsnr_admm(gu0.ravel(), create_filters(filters, gu0.ravel(), 512, 512, xp), 512, 512, nit, beta, xp, cvg_threshold=cvg_threshold)[0] for gu0 in gu0_batch]
     gu0_batch = vsnr_admm_batch(gu0_batch, create_filters_batch(filters, gu0_batch, 512, 512, xp), 512, 512, nit, beta, xp, cvg_threshold=cvg_threshold)[0]
 
     for i in range(10):
-        assert xp.allclose(gu0_batch[i], gu0_individually[i], atol=1e-5)
+        assert xp.allclose(gu0_batch[i].ravel(), gu0_individually[i], atol=1e-5)
 
 def test_vsnr2d_batch_same_img():
     """ Test the batch processing """
