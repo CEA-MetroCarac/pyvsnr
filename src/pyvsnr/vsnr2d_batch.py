@@ -161,17 +161,17 @@ def create_filters(filters, gu0, n0, n1, xp):
     fsum = 0
     norm = xp.linalg.norm(gu0)
 
-    # Computes d1 and fd1
+    # Computes fd1
     n = n0 * n1
     # d1=xp.array([-3-10j,-2+2j],dtype=xp.complex64) #test
-    d1 = setd1(n, n1, xp)  # // d1[0] = 1; d1[n1-1] = -1;
-    fd1 = xp.fft.fft2(d1.reshape(n0, n1)).ravel()
+    fd1 = setd1(n, n1, xp)  # // d1[0] = 1; d1[n1-1] = -1;
+    fd1 = xp.fft.fft2(fd1.reshape(n0, n1)).ravel()
     fd1 = xp.abs(fd1)  # // fd1 = |fd1|;
 
-    # Computes d2 and fd2
+    # Computes fd2
     # d2=xp.array([5-1j,-4+2j],dtype=xp.complex64) #test
-    d2 = setd2(n, n1, xp)  # // d2[0] = 1; d2[(n0-1)*n1] = -1;
-    fd2 = xp.fft.fft2(d2.reshape(n0, n1)).ravel()
+    fd2 = setd2(n, n1, xp)  # // d2[0] = 1; d2[(n0-1)*n1] = -1;
+    fd2 = xp.fft.fft2(fd2.reshape(n0, n1)).ravel()
     fd2 = xp.abs(fd2)
 
     # Computes PSI = sum_{i=1}^m |PSI_i|^2/alpha_i, where alpha_i is defined in the paper.
@@ -188,23 +188,23 @@ def create_filters(filters, gu0, n0, n1, xp):
             )
             eta = filt["noise_level"]
 
-        fpsitemp = xp.fft.fft2(psitemp.reshape(n0, n1)).ravel()
+        psitemp = xp.fft.fft2(psitemp.reshape(n0, n1)).ravel()
 
-        fpsitemp = xp.square(xp.abs(fpsitemp))  # // fpsitemp = |fpsitemp|^2;)
+        psitemp = xp.square(xp.abs(psitemp))  # // psitemp = |psitemp|^2;)
 
-        ftmp = xp.multiply(xp.abs(fd1), xp.abs(fpsitemp))
+        ftmp = xp.multiply(xp.abs(fd1), xp.abs(psitemp))
         imax = xp.argmax(xp.abs(ftmp))  # find the index of the maximum element
         max1 = ftmp[imax]
 
-        ftmp = xp.multiply(xp.abs(fd2), xp.abs(fpsitemp))
+        ftmp = xp.multiply(xp.abs(fd2), xp.abs(psitemp))
         imax = xp.argmax(xp.abs(ftmp))
         max2 = ftmp[imax]
         nmax = max(max1, max2)
         alpha = xp.sqrt(n) * n**2 * nmax / (norm * eta)
 
         fsum = update_psi(
-            fpsitemp, fsum, alpha, xp
-        )  # fsum += |fpsitemp|^2 / alpha_i;
+            psitemp, fsum, alpha, xp
+        )  # fsum += |psitemp|^2 / alpha_i;
 
     fsum = xp.sqrt(fsum)  # // fsum = sqrtf(fsum);
     gpsi = xp.fft.ifft2(fsum.reshape(n0, n1), norm="forward").ravel()
@@ -272,10 +272,6 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
         # fx = (tmp1 + tmp2) / fphi;
         fx = xp.divide(xp.add(ftmp1, ftmp2), fphi)
 
-        #     // --------------------------------------------------------
-        #     // Second step y update : y = prox_{f1/beta}(Ax+lambda/beta)
-        #     // --------------------------------------------------------
-
         # Second step y update : y = prox_{f1/beta}(Ax+lambda/beta)
         ftmp1 = xp.multiply(fphi1, fx)
         ftmp2 = xp.multiply(fphi2, fx)
@@ -286,9 +282,7 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
 
         y1, y2 = update_y(d1u0, d2u0, ftmp1, ftmp2, lambda1, lambda2, beta, xp)
 
-        #     // --------------------------
-        #     // Third step lambda update
-        #     // --------------------------
+        # Third step lambda update : lambda = lambda + beta * (Ax - y)
         lambda1 = lambda1 + xp.multiply(beta, xp.subtract(ftmp1, y1))
         lambda2 = lambda2 + xp.multiply(beta, xp.subtract(ftmp2, y2))
 
@@ -300,7 +294,7 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
         fx_old = fx
         i += 1
 
-    # // Last but not the least : u = u0 - (psi * x)
+    # Last but not the least : u = u0 - (psi * x)
     ftmp1 = xp.multiply(fx, fpsi)
     u = xp.fft.ifft2(ftmp1.reshape(batch_size, n0, n1), norm="forward").reshape(batch_size, -1).real
     u = xp.divide(u, n)
