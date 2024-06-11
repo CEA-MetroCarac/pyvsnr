@@ -38,7 +38,9 @@ For **GPU** execution, a working CUDA installation is necessary wether you want 
 ## Usage
 <!-- To use `pyvsnr`, you can import the `vsnr2d` function from `vsnr2d.py` or the `vsnr2d_cuda` function from `vsnr2d_cuda.py`. -->
 
-Here is a basic example:
+`pyvsnr` allows you to process either a single image (2D array) or a batch of images (3D array). Here are some basic examples:
+
+### Single Image
 
 ```python
 import numpy as np
@@ -50,15 +52,28 @@ filters = [{'name':'Dirac', 'noise_level':0.35}]  # List of filters
 img_corr_py = vsnr2d(img, filters) # Compute VSNR
 ```
 
-<!-- explanation of maxit and algo choice -->
+### Batch of Images
 
-By default, the `vsnr2d` function uses auto detection to determine whether to use the CPU or GPU implementation. If CuPy is installed, it will use it, otherwise it will try to use the CUDA implementation. If neither are available, it will fall back to the NumPy CPU implementation.
+```python
+import numpy as np
+from pyvsnr import vsnr2d
 
-If you want to choose the algorithm to use, you can do so using the `algo` argument (possible values are `'auto'`, `'numpy'`, `'cupy'` or `'cuda'`; default value is `'auto'`) :
+imgs = np.random.random((10, 100, 100))  # Batch of 10 images
+filters = [{'name':'Dirac', 'noise_level':0.35}]  # List of filters
+
+imgs_corr_py = vsnr2d(imgs, filters) # Compute VSNR for each image in the batch
+```
+
+Please note that the CUDA implementation has only been kept in the old `vsnr2d` function (which is now `vsnr2d_single`). This function can only handle single 2D images, not batches of images. If you need to process a batch of images with CUDA, you will need to loop over the images and process them one at a time.
+
+By default, the `vsnr2d_single` function uses auto detection to determine whether to use the CPU or GPU implementation. If CuPy is installed, it will use it, otherwise it will try to use the CUDA implementation. If neither are available, it will fall back to the NumPy CPU implementation.
+
+If you want to choose the algorithm to use, you can do so using the `algo` argument. The possible values are `'auto'`, `'numpy'`, and `'cupy'`. The default value is `'auto'`. For `vsnr2d_single`, an additional option `'cuda'` is available. Please note that the `'cuda'` option is not applicable to `vsnr2d`.
 
 ```python
 # Compute VSNR using CUDA
-img_corr_cuda = vsnr2d(img, filters, algo='cuda')
+from pyvsnr import vsnr2d_single
+img_corr_cuda = vsnr2d_single(img, filters, algo='cuda')
 ```
 
 The `cvg_threshold` parameter is a stopping criterion based on the relative-change of the denoised image between successive iterations.
@@ -111,7 +126,7 @@ You can also create your own tests using `from pyvsnr.utils import curtains_addi
 
 ## Shared library re-compilation
 <!-- TODO CUDA can only be used in old vsnr2d: from pyvsnr import vsnr2d_single which can only treat one 2D array
-whereas new vsnr2d can treat multiples imgs (3D arrays), note that 3D array of 1img work to treat single img  -->
+whereas new vsnr2d can treat multiples imgs (3D arrays), note that new vsnr2d can also take single 2D image but it will convert to 3D  -->
 If you encounter shared library load errors then you may need
 to recompile from source. This requires a working CUDA installation
 with `nvcc` compiler. The source code is distributed with this package
