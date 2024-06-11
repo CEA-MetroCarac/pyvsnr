@@ -38,6 +38,17 @@ def test_create_filters_batch():
 
     for i in range(10):
         assert xp.allclose(gpsi[i].ravel(), gpsi1)
+
+    # Test for Gabor filter
+    gpsi1_gabor = create_filters(
+        [{"name": "Gabor", "noise_level": 100, "sigma": (1000, 0.1), "theta": 0}], gu0, 512, 512, xp
+    )
+    gpsi_gabor = create_filters_batch(
+        [{"name": "Gabor", "noise_level": 100, "sigma": (1000, 0.1), "theta": 0}], gu0_batch, 512, 512, xp
+    )
+
+    for i in range(10):
+        assert xp.allclose(gpsi_gabor[i].ravel(), gpsi1_gabor)
         
 def test_admm_batch():
     """ Test the vsnr_admm_batch function """

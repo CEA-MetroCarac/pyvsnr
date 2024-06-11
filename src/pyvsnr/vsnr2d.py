@@ -69,7 +69,7 @@ def create_gabor(n0, n1, level, sigmax, sigmay, angle, phase, lambda_, xp):
     ) * xp.cos((x_theta * lambda_ / sigmax) + phase)
     psi = level * val / nn
 
-    return psi.ravel()
+    return psi
 
 
 def update_y(d1u0, d2u0, tmp1, tmp2, lambda1, lambda2, beta, xp):
@@ -111,7 +111,6 @@ def setd2(n0, n1, xp):
 
 def compute_vsnr(filters, u0, n0, n1, nit, beta, vmax, xp, cvg_threshold):
     """Calculate the corrected image using the 2D-VSNR algorithm"""
-    batch_size = u0.shape[0]
     gu = xp.zeros_like(u0, dtype=xp.float32)
 
     gu0 = u0.copy()
@@ -315,8 +314,6 @@ def vsnr2d_py(
 
     # calculation
     imgs_corr, cvg_criteria = compute_vsnr(filters, imgs, n0, n1, maxit, beta, vmax_norm, xp, cvg_threshold)
-    # reshaping
-    # imgs_corr = xp.array(u).reshape(batch_size, n0, n1)
 
     if norm:
         imgs_corr = xp.clip(imgs_corr, 0, 1)
