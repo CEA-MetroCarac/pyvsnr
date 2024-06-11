@@ -335,6 +335,9 @@ def vsnr2d_py(
     except:
         pass
 
+    # Remove the extra dimension from the output if the original input was a 2D array
+    imgs_corr = xp.squeeze(imgs_corr)
+
     if return_cvg:
         return imgs_corr, cvg_criteria
 

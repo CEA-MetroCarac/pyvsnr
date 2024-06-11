@@ -49,7 +49,7 @@ from pyvsnr import vsnr2d
 img = np.random.random((100, 100))  # Input image
 filters = [{'name':'Dirac', 'noise_level':0.35}]  # List of filters
 
-img_corr_py = vsnr2d(img, filters) # Compute VSNR
+img_corr_py = vsnr2d(img, filters) # output is a 2D array (100, 100)
 ```
 
 ### Batch of Images
@@ -61,7 +61,7 @@ from pyvsnr import vsnr2d
 imgs = np.random.random((10, 100, 100))  # Batch of 10 images
 filters = [{'name':'Dirac', 'noise_level':0.35}]  # List of filters
 
-imgs_corr_py = vsnr2d(imgs, filters) # Compute VSNR for each image in the batch
+imgs_corr_py = vsnr2d(imgs, filters) # Output is a 3D array (10, 100, 100)
 ```
 
 Please note that the CUDA implementation has only been kept in the old `vsnr2d` function (which is now `vsnr2d_single`). This function can only handle single 2D images, not batches of images. If you need to process a batch of images with CUDA, you will need to loop over the images and process them one at a time.
@@ -125,8 +125,6 @@ jupyter notebook tests/notebook.ipynb
 You can also create your own tests using `from pyvsnr.utils import curtains_addition, stripes_addition, add_gaussian_noise`
 
 ## Shared library re-compilation
-<!-- TODO CUDA can only be used in old vsnr2d: from pyvsnr import vsnr2d_single which can only treat one 2D array
-whereas new vsnr2d can treat multiples imgs (3D arrays), note that new vsnr2d can also take single 2D image but it will convert to 3D  -->
 If you encounter shared library load errors then you may need
 to recompile from source. This requires a working CUDA installation
 with `nvcc` compiler. The source code is distributed with this package
