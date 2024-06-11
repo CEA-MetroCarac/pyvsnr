@@ -349,6 +349,7 @@ def vsnr2d(
     norm=True,
     cvg_threshold=0,
     return_cvg=False,
+    verbose=False,
 ):
     r"""
     Calculate the corrected image using the 2D-VSNR algorithm in libvsnr2d.dll
@@ -389,6 +390,8 @@ def vsnr2d(
         image is renormalized to the original range
     return_cvg: bool, optional
         If True, the function returns the convergence criterion for each iteration
+    verbose: bool, optional
+        If True, print the used algorithm
 
     Returns
     -------
@@ -401,9 +404,9 @@ def vsnr2d(
             algo = 'cupy'
         else:
             algo = 'numpy'
-
-    # TODO : add verbose mode to print used algo
-    # TODO : keep old vsnr2d as "from pyvsnr import vsnr2d_single" for tests ? 
+    
+    if verbose:
+        print(f"Using {algo} algorithm")
     
     if algo == 'cupy':
         return vsnr2d_py(imgs, filters, maxit=maxit, xp=cp, beta=beta, norm=norm, cvg_threshold=cvg_threshold, return_cvg=return_cvg)
