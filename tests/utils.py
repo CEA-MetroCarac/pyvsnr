@@ -12,7 +12,7 @@ from skimage._shared.utils import (
 )
 from skimage.util.dtype import dtype_range
 
-from src.pyvsnr import vsnr2d
+from src.pyvsnr import vsnr2d_single
 
 
 def measure_vsnr(
@@ -21,7 +21,7 @@ def measure_vsnr(
     """ Measure the execution time of a vsnr2d algorithm """
     t0 = time.perf_counter()
 
-    img_corr = vsnr2d(img, filters, maxit=maxit, algo=algo, beta=beta, norm=norm)
+    img_corr = vsnr2d_single(img, filters, maxit=maxit, algo=algo, beta=beta, norm=norm)
 
     process_time = round(time.perf_counter() - t0, 3)
 

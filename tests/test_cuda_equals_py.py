@@ -7,7 +7,7 @@ import cupy as cp
 import numpy as np
 from skimage import exposure, data
 
-from src.pyvsnr.vsnr2d import (
+from pyvsnr.vsnr2d_single import (
     vsnr_admm,
     create_filters,
     setd1,
@@ -19,7 +19,7 @@ from src.pyvsnr.vsnr2d import (
     create_gabor,
 )
 
-from src.pyvsnr import vsnr2d, vsnr2d_cuda
+from src.pyvsnr import vsnr2d_single, vsnr2d_cuda
 from src.pyvsnr.utils import stripes_addition
 
 DIRNAME = pathlib.Path(__file__).parent
@@ -726,7 +726,7 @@ def test_cuda_equals_cupy_numpy():
 
     img = stripes_addition(img, 0.2)
 
-    img_corr_py = vsnr2d(img, filters, maxit=maxit)
+    img_corr_py = vsnr2d_single(img, filters, maxit=maxit)
     img_corr_cuda = vsnr2d_cuda(img, filters, nite=maxit)
 
     xp.testing.assert_allclose(img_corr_cuda, img_corr_py, atol=1e-3)
@@ -740,7 +740,7 @@ def test_data_min_max_preserved():
 
     img = stripes_addition(img, 0.2)
 
-    img_corr = vsnr2d(img, filters, maxit=maxit)
+    img_corr = vsnr2d_single(img, filters, maxit=maxit)
     img_corr_cuda = vsnr2d_cuda(img, filters, nite=maxit)
 
     assert img_corr.min() == img_corr_cuda.min() == img.min()
@@ -755,7 +755,7 @@ def test_original_img_preserved():
     img = stripes_addition(img, 0.2)
     img_copy = img.copy()
 
-    vsnr2d(img, filters, maxit=maxit)
+    vsnr2d_single(img, filters, maxit=maxit)
     vsnr2d_cuda(img, filters, nite=maxit)
 
     assert xp.array_equal(img, img_copy)

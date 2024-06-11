@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "pyvsnr"
-version = "2.0.5"
+version = "2.1.0"
 description = "VSNR (Variational Stationary Noise Remover) algorithm in python"
 authors = ["Killian Pavy <killian.pavy@cea.fr>", "Patrick Quemere <patrick.quemere@cea.fr>"]
 license = "AGPL-3.0-only"

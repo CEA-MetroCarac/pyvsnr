@@ -1,5 +1,5 @@
 import numpy as np
-from src.pyvsnr.vsnr2d import create_gabor
+from pyvsnr.vsnr2d_single import create_gabor
 
 def pad_centered(arr, shape_ref, value=0):
     """

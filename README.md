@@ -110,7 +110,8 @@ jupyter notebook tests/notebook.ipynb
 You can also create your own tests using `from pyvsnr.utils import curtains_addition, stripes_addition, add_gaussian_noise`
 
 ## Shared library re-compilation
-
+<!-- TODO CUDA can only be used in old vsnr2d: from pyvsnr import vsnr2d_single which can only treat one 2D array
+whereas new vsnr2d can treat multiples imgs (3D arrays), note that 3D array of 1img work to treat single img  -->
 If you encounter shared library load errors then you may need
 to recompile from source. This requires a working CUDA installation
 with `nvcc` compiler. The source code is distributed with this package

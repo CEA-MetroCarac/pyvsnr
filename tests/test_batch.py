@@ -1,16 +1,16 @@
-""" Pytest file to verify that the python code is equivalent to the cuda code """
+"""Pytest file to verify that the python code is equivalent to the cuda code"""
 import pathlib
 
 import cupy as cp
 import numpy as np
 from skimage import data
 
-from src.pyvsnr import vsnr2d
-from src.pyvsnr.vsnr2d_batch import vsnr2d_batch
+from pyvsnr import vsnr2d_single
+from pyvsnr import vsnr2d
 
-from src.pyvsnr.vsnr2d import create_filters, vsnr_admm
-from src.pyvsnr.vsnr2d_batch import create_filters_batch
-from src.pyvsnr.vsnr2d_batch import vsnr_admm as vsnr_admm_batch
+from pyvsnr.vsnr2d_single import create_filters, vsnr_admm
+from pyvsnr.vsnr2d import create_filters_batch
+from pyvsnr.vsnr2d import vsnr_admm as vsnr_admm_batch
 
 from src.pyvsnr.utils import stripes_addition
 
@@ -74,8 +74,8 @@ def test_vsnr2d_batch_same_img():
     filters = [{"name": "Dirac", "noise_level": 10}]
     print(gu0.shape, gu0_batch.shape)
 
-    gu0 = vsnr2d(gu0, filters)
-    gu0_batch = vsnr2d_batch(gu0_batch, filters)  
+    gu0 = vsnr2d_single(gu0, filters)
+    gu0_batch = vsnr2d(gu0_batch, filters)  
 
     for i in range(10):
         assert xp.allclose(gu0_batch[i], gu0)
@@ -93,8 +93,8 @@ def test_vsnr2d_batch_random_imgs():
 
     filters = [{"name": "Dirac", "noise_level": 10}]
 
-    gu0_individually = [vsnr2d(gu0, filters) for gu0 in gu0_batch]
-    gu0_batch = vsnr2d_batch(gu0_batch, filters)  
+    gu0_individually = [vsnr2d_single(gu0, filters) for gu0 in gu0_batch]
+    gu0_batch = vsnr2d(gu0_batch, filters)  
 
     for i in range(10):
         #print(np.max(np.abs(gu0_individually[i] - gu0_batch[i])))
@@ -108,7 +108,7 @@ def test_vsnr2d_batch_single_img():
 
     filters = [{"name": "Dirac", "noise_level": 10}]
 
-    gu0_individually = vsnr2d(img, filters)
-    gu0_batch = vsnr2d_batch(img, filters)  
+    gu0_individually = vsnr2d_single(img, filters)
+    gu0_batch = vsnr2d(img, filters)  
 
     assert xp.allclose(gu0_individually, gu0_batch)
