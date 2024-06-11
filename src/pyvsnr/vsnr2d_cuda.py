@@ -6,12 +6,17 @@ import os
 import numpy as np
 
 PRECOMPILED_PATH = pathlib.Path(__file__).parent / 'precompiled'
+added_dll_directories = set()  # Create a global set to store added directories
 
 def get_dll():
-    """ Load the dedicated .dll library """
+    """Load the dedicated .dll library"""
     try:
         if os.name == 'nt':
-            os.add_dll_directory(str(PRECOMPILED_PATH))
+            dll_directory = str(PRECOMPILED_PATH)
+            if dll_directory not in added_dll_directories:
+                os.add_dll_directory(dll_directory)
+                added_dll_directories.add(dll_directory)
+            
             return CDLL(
                 str(PRECOMPILED_PATH / "libvsnr2d.dll"),
                 winmode=0,
