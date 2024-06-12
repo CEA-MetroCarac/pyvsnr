@@ -421,6 +421,10 @@ def vsnr2d(
     if verbose:
         print(f"Using {algo} algorithm")
 
+    # TODO Global normalization
+    # TODO optionally take file path as input, load and process concurrently ?
+    # TODO auto set batch size based on user input MAX_GPU_MEM and image size
+
     if algo == 'cupy':
         return vsnr2d_py(
             imgs,
