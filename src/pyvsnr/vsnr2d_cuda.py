@@ -1,4 +1,5 @@
 """ This python module is a wrapper for the cuda implementation of the VSNR2D """
+import warnings
 import pathlib
 from ctypes import POINTER, c_int, c_float, CDLL
 
@@ -76,10 +77,32 @@ def vsnr2d_cuda(img, filters, nite=20, beta=10., nblocks='auto', norm=True):
     img_corr: numpy.ndarray((n0, n1))
         The corrected image
     """
+
+    # Check if img is a batch of images
+    if img.ndim == 3:
+        warnings.warn("CUDA algorithm doesn't support batch processing,\
+ processing images one by one. Consider using algo='cupy'")
+        result = []
+        for img_single in img:
+            result.append(
+                vsnr2d_cuda(
+                    img_single,
+                    filters,
+                    nite=nite,
+                    beta=beta,
+                    nblocks=nblocks,
+                    norm=norm,
+                )
+            )
+        return np.stack(result)
+
+    if hasattr(img, 'get'):
+        img = img.get()
+
     length = len(filters)
     n0, n1 = img.shape
     dtype = img.dtype
-    
+
     vmin, vmax = img.min(), img.max()
 
     if norm:
@@ -124,10 +147,15 @@ def vsnr2d_cuda(img, filters, nite=20, beta=10., nblocks='auto', norm=True):
 
     if norm:
         img_corr = np.clip(img_corr, 0, 1)
-        img_corr = (img_corr - img_corr.min()) / (img_corr.max() - img_corr.min())
+        img_corr = (img_corr - img_corr.min()) / (
+            img_corr.max() - img_corr.min()
+        )
         img_corr = vmin + img_corr * (vmax - vmin)
+    elif np.issubdtype(dtype, np.integer):
+        # If dtype is integer, clip at its maximum value to avoid overflow
+        img_corr = np.clip(img_corr, 0, np.iinfo(dtype).max)
 
     # recast to original dtype
     img_corr = img_corr.astype(dtype)
-    
+
     return img_corr

@@ -4,16 +4,21 @@ its a port of the original CUDA implementation to python using cupy.
 It contains several improvements in terms of performance and memory usage.
 """
 import numpy as np
+from .vsnr2d_cuda import get_dll, vsnr2d_cuda
 
 # determine the algo to use for auto mode
-# 1. cupy; 2. numpy
-
+# 1. cupy; 2. cuda; 3. numpy
+CUDA_AVAILABLE = False
 CUPY_AVAILABLE = False
 try:
     import cupy as cp
     CUPY_AVAILABLE = True
 except ImportError:
-    pass
+    try:
+        get_dll()
+        CUDA_AVAILABLE = True
+    except:
+        pass
 
 def compute_phi(fphi1, fphi2, beta, xp):
     """Compute the value of fphi based on the values of fphi1, fphi2, and beta."""
@@ -297,7 +302,10 @@ def vsnr2d_py(
     if len(imgs.shape) == 2:
         imgs = imgs[np.newaxis, :, :]
 
+    if hasattr(imgs, 'get'):
+        imgs = imgs.get()
     imgs = xp.asarray(imgs)
+
     batch_size, n0, n1 = imgs.shape
     dtype = imgs.dtype
 
@@ -321,6 +329,9 @@ def vsnr2d_py(
             imgs_corr.max(axis=(1,2))[:, None, None] - imgs_corr.min(axis=(1,2))[:, None, None]
         )
         imgs_corr = vmin[:, None, None] + imgs_corr * (vmax[:, None, None] - vmin[:, None, None])
+    elif xp.issubdtype(dtype, xp.integer):
+        # If dtype is integer, clip at its maximum value to avoid overflow
+        imgs_corr = xp.clip(imgs_corr, 0, xp.iinfo(dtype).max)
 
     # cast to original dtype
     imgs_corr = imgs_corr.astype(dtype)
@@ -352,7 +363,7 @@ def vsnr2d(
     verbose=False,
 ):
     r"""
-    Calculate the corrected image using the 2D-VSNR algorithm in libvsnr2d.dll
+    Calculate the corrected image using the 2D-VSNR algorithm
 
     Notes
     -----
@@ -402,17 +413,47 @@ def vsnr2d(
     if algo == 'auto':
         if CUPY_AVAILABLE:
             algo = 'cupy'
+        elif CUDA_AVAILABLE:
+            algo = 'cuda'
         else:
             algo = 'numpy'
-    
+
     if verbose:
         print(f"Using {algo} algorithm")
-    
+
     if algo == 'cupy':
-        return vsnr2d_py(imgs, filters, maxit=maxit, xp=cp, beta=beta, norm=norm, cvg_threshold=cvg_threshold, return_cvg=return_cvg)
-    
+        return vsnr2d_py(
+            imgs,
+            filters,
+            maxit=maxit,
+            xp=cp,
+            beta=beta,
+            norm=norm,
+            cvg_threshold=cvg_threshold,
+            return_cvg=return_cvg,
+        )
+
+    elif algo == 'cuda':
+        return vsnr2d_cuda(
+            imgs,
+            filters,
+            nite=maxit,
+            beta=beta,
+            nblocks="auto",
+            norm=norm,
+        )
+
     elif algo == 'numpy':
-        return vsnr2d_py(imgs, filters, maxit=maxit, xp=np, beta=beta, norm=norm, cvg_threshold=cvg_threshold, return_cvg=return_cvg)
-    
+        return vsnr2d_py(
+            imgs,
+            filters,
+            maxit=maxit,
+            xp=np,
+            beta=beta,
+            norm=norm,
+            cvg_threshold=cvg_threshold,
+            return_cvg=return_cvg,
+        )
+
     else:
-        raise ValueError("algo must be 'cupy', or 'numpy'")
+        raise ValueError("algo must be 'cupy', 'numpy', or 'cuda'.")

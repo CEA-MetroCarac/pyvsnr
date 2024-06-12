@@ -12,16 +12,16 @@ from skimage._shared.utils import (
 )
 from skimage.util.dtype import dtype_range
 
-from src.pyvsnr import vsnr2d_single
+from src.pyvsnr import vsnr2d
 
 
 def measure_vsnr(
-    img, filters, maxit=20, algo='auto', beta=10.0, nblocks="auto", norm=True
+    imgs, filters, maxit=20, algo='auto', beta=10.0, nblocks="auto", norm=True
 ):
     """ Measure the execution time of a vsnr2d algorithm """
     t0 = time.perf_counter()
 
-    img_corr = vsnr2d_single(img, filters, maxit=maxit, algo=algo, beta=beta, norm=norm)
+    img_corr = vsnr2d(imgs, filters, maxit=maxit, algo=algo, beta=beta, norm=norm)
 
     process_time = round(time.perf_counter() - t0, 3)
 
@@ -33,26 +33,26 @@ def measure_vsnr(
     return img_corr
 
 
-def measure_vsnr_cuda(img, filters, nite=20, beta=10.0, nblocks="auto", norm=True):
+def measure_vsnr_cuda(imgs, filters, nite=20, beta=10.0, nblocks="auto", norm=True):
     """ Measure the execution time of the vsnr2d_cuda algorithm """
     img_corr_cuda = measure_vsnr(
-        img, filters, algo='cuda', maxit=nite, beta=beta, nblocks=nblocks, norm=norm
+        imgs, filters, algo='cuda', maxit=nite, beta=beta, nblocks=nblocks, norm=norm
     )
     return img_corr_cuda
 
 
-def measure_vsnr_cupy(img, filters, maxit=20, beta=10.0, norm=True):
+def measure_vsnr_cupy(imgs, filters, maxit=20, beta=10.0, norm=True):
     """ Measure the execution time of the vsnr2d_cupy algorithm """
     img_corr_cupy = measure_vsnr(
-        img, filters, algo='cupy', maxit=maxit, beta=beta, norm=norm
+        imgs, filters, algo='cupy', maxit=maxit, beta=beta, norm=norm
     )
     return img_corr_cupy
 
 
-def measure_vsnr_numpy(img, filters, maxit=20, beta=10.0, norm=True):
+def measure_vsnr_numpy(imgs, filters, maxit=20, beta=10.0, norm=True):
     """ Measure the execution time of the vsnr2d_numpy algorithm """
     img_corr_numpy = measure_vsnr(
-        img, filters, algo='numpy', maxit=maxit, beta=beta, norm=norm
+        imgs, filters, algo='numpy', maxit=maxit, beta=beta, norm=norm
     )
     return img_corr_numpy
 

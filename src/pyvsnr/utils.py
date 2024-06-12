@@ -1,5 +1,30 @@
 import numpy as np
-from pyvsnr.vsnr2d_single import create_gabor
+
+def create_gabor(n0, n1, level, sigmax, sigmay, angle, phase, lambda_, xp):
+    """Create a Gabor filter."""
+    psi = xp.zeros((n0, n1), dtype=xp.float32)
+
+    theta = xp.radians(angle)
+    offset_x = (n1 / 2.0) + 1.0
+    offset_y = (n0 / 2.0) + 1.0
+    phase = xp.radians(phase)
+    nn = xp.pi / xp.sqrt(sigmax * sigmay)
+
+    i = xp.arange(n1)
+    j = xp.arange(n0)
+    x, y = xp.meshgrid(i, j)
+
+    x = offset_x - x
+    y = offset_y - y
+    x_theta = x * xp.cos(theta) + y * xp.sin(theta)
+    y_theta = y * xp.cos(theta) - x * xp.sin(theta)
+
+    val = xp.exp(
+        -0.5 * ((x_theta / sigmax) ** 2 + (y_theta / sigmay) ** 2)
+    ) * xp.cos((x_theta * lambda_ / sigmax) + phase)
+    psi = level * val / nn
+
+    return psi.flatten()
 
 def pad_centered(arr, shape_ref, value=0):
     """

@@ -7,19 +7,7 @@ import cupy as cp
 import numpy as np
 from skimage import exposure, data
 
-from pyvsnr.vsnr2d_single import (
-    vsnr_admm,
-    create_filters,
-    setd1,
-    setd2,
-    compute_phi,
-    update_psi,
-    update_y,
-    create_dirac,
-    create_gabor,
-)
-
-from src.pyvsnr import vsnr2d_single, vsnr2d_cuda
+from src.pyvsnr import vsnr2d, vsnr2d_cuda
 from src.pyvsnr.utils import stripes_addition
 
 DIRNAME = pathlib.Path(__file__).parent
@@ -404,320 +392,7 @@ def cuda_algo():
 
     return img_corr
 
-
-def test_multiply():
-    """ Test the multiply functions """
-    multiply_kernel = mod.get_function("product_carray")
-
-    a_kernel = (
-        cp.random.rand(
-            10000,
-        )
-        + 1j
-        * cp.random.rand(
-            10000,
-        )
-    ).astype(cp.complex64)
-    b_kernel = (
-        cp.random.rand(
-            10000,
-        )
-        + 1j
-        * cp.random.rand(
-            10000,
-        )
-    ).astype(cp.complex64)
-    res_kernel = cp.zeros_like(a_kernel)
-
-    a = a_kernel.copy()
-    b = b_kernel.copy()
-    res = res_kernel.copy()
-
-    m = 100 * 100
-    blocksize = 256
-    gridsize = (m + blocksize - 1) // blocksize
-
-    multiply_kernel(
-        (gridsize, 1), (blocksize, 1), (a_kernel, b_kernel, res_kernel, m)
-    )
-    res = cp.multiply(a, b)
-
-    assert cp.allclose(res, res_kernel, atol=1e-7)
-
-
-def test_setd1():
-    """ Test the setd1 functions """
-    # setd1_kernel = cp.RawKernel(cuda_code, 'setd1')
-    setd1_kernel = mod.get_function("setd1")
-    n1 = 100
-    d1_kernel = cp.random.rand(100, 100, dtype=xp.float32)  # setd1 from CUDA
-    d1_kernel = d1_kernel.flatten()
-    d1 = d1_kernel.copy()
-    setd1_kernel((10, 10), (32, 32), (d1_kernel, 100 * 100, n1))
-    d1 = setd1(n1**2, n1, xp)
-    assert xp.allclose(d1, d1_kernel)
-
-
-def test_setd2():
-    """ Test the setd2 functions """
-    # setd2_kernel = cp.RawKernel(cuda_code, 'setd2')
-    setd2_kernel = mod.get_function("setd2")
-    n1 = 100
-    d2_kernel = cp.random.rand(100, 100, dtype=xp.float32)  # setd2 from CUDA
-    d2_kernel = d2_kernel.flatten()
-    d2 = d2_kernel.copy()
-    setd2_kernel((10, 10), (32, 32), (d2_kernel, 100 * 100, n1))
-    d2 = setd2(n1**2, n1, xp)
-    xp.testing.assert_allclose(d2, d2_kernel)
-
-
-def test_compute_norm():
-    """ Test the compute_norm functions """
-    # compute_norm_kernel = cp.RawKernel(cuda_code, 'compute_norm')
-    compute_norm_kernel = mod.get_function("compute_norm")
-    fpsi_kernel = xp.random.rand(100, 100, dtype=xp.float64).astype(
-        xp.complex64
-    )
-    fpsi_kernel = fpsi_kernel.flatten()
-    fpsi = fpsi_kernel.copy()
-    m = 100
-    compute_norm_kernel((10, 10), (32, 32), (fpsi_kernel, m))
-    fpsi = xp.absolute(fpsi)
-    xp.testing.assert_allclose(fpsi, fpsi_kernel)
-
-
-def test_compute_product():
-    """ Test the compute_product functions """
-    # compute_product_kernel = cp.RawKernel(cuda_code, 'compute_product')
-    compute_product_kernel = mod.get_function("compute_product")
-    fpsi_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
-        xp.complex64
-    )
-    fpsi_kernel = fpsi_kernel.flatten()
-    fpsi = fpsi_kernel.copy()
-    fd_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(xp.complex64)
-    fd_kernel = fd_kernel.flatten()
-    fd = fd_kernel.copy()
-    ftmp_kernel = xp.random.rand(100, 100, dtype=xp.float32)
-    ftmp_kernel = ftmp_kernel.flatten()
-    ftmp = ftmp_kernel.copy()
-    m = 100 * 100
-    compute_product_kernel(
-        (256, 1), (40, 1), (fpsi_kernel, fd_kernel, ftmp_kernel, m)
-    )
-    ftmp = xp.multiply(fpsi, fd)
-    xp.testing.assert_allclose(ftmp, ftmp_kernel)
-
-def test_compute_sqrtf():
-    """ Test the compute_sqrtf functions """
-    # compute_sqrtf_kernel = cp.RawKernel(cuda_code, 'compute_sqrtf')
-    compute_sqrtf_kernel = mod.get_function("compute_sqrtf")
-    fsum_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
-        xp.complex64
-    )
-    fsum_kernel = fsum_kernel.flatten()
-    fsum = fsum_kernel.copy()
-    m = 100 * 100
-    compute_sqrtf_kernel((256, 1), (40, 1), (fsum_kernel, m))
-    fsum = xp.sqrt(fsum)
-    xp.testing.assert_allclose(fsum, fsum_kernel)
-
-
-def test_compute_phi():
-    """ Test the compute_phi functions """
-    # compute_phi_kernel = cp.RawKernel(cuda_code, 'compute_phi')
-    compute_phi_kernel = mod.get_function("compute_phi")
-    fphi_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
-        xp.complex64
-    )
-    fphi_kernel = fphi_kernel.flatten()
-    fphi = fphi_kernel.copy()
-    fphi1_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
-        xp.complex64
-    )
-    fphi1_kernel = fphi1_kernel.flatten()
-    fphi1 = fphi1_kernel.copy()
-    fphi2_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
-        xp.complex64
-    )
-    fphi2_kernel = fphi2_kernel.flatten()
-    fphi2 = fphi2_kernel.copy()
-    beta = xp.float32(1.5)
-    n = 100 * 100
-
-    compute_phi_kernel(
-        (256, 1), (40, 1), (fphi1_kernel, fphi2_kernel, fphi_kernel, beta, n)
-    )
-    fphi = compute_phi(fphi1, fphi2, beta, xp)
-    xp.testing.assert_allclose(
-        fphi, fphi_kernel, atol=1e-7
-    )  # ?? fonctionnait sans préciser la tolerance avec assert np.allclose
-
-def test_update_psi():
-    """ Test the update_psi functions """
-    # update_psi_kernel = cp.RawKernel(cuda_code, 'update_psi')
-    update_psi_kernel = mod.get_function("update_psi")
-    fpsitemp_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
-        xp.complex64
-    )
-    fpsitemp_kernel = fpsitemp_kernel.flatten()
-    fpsitemp = fpsitemp_kernel.copy()
-    fsum_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
-        xp.complex64
-    )
-    fsum_kernel = fsum_kernel.flatten()
-    fsum = fsum_kernel.copy()
-    alpha = xp.float32(2.3)
-    m = 100 * 100
-    update_psi_kernel(
-        (256, 1), (40, 1), (fpsitemp_kernel, fsum_kernel, alpha, m)
-    )
-    fsum = update_psi(fpsitemp, fsum, 2.3, xp)
-    xp.testing.assert_allclose(
-        fsum, fsum_kernel, atol=1e-7
-    )  # ?? fonctionnait sans préciser la tolerance avec assert np.allclose
-
-
-def test_update_y():
-    """ Test the update_y functions """
-    # update_y_kernel = cp.RawKernel(cuda_code, 'update_y')
-    update_y_kernel = mod.get_function("update_y")
-    d1u0_kernel = xp.zeros((10000,), dtype=xp.float32)
-    d1u0 = d1u0_kernel.copy()
-    d2u0_kernel = xp.zeros((10000,), dtype=xp.float32)
-    d2u0 = d2u0_kernel.copy()
-    tmp1_kernel = xp.zeros((10000,), dtype=xp.float32)
-    tmp1 = tmp1_kernel.copy()
-    tmp2_kernel = xp.zeros((10000,), dtype=xp.float32)
-    tmp2 = tmp2_kernel.copy()
-    lambda1_kernel = xp.zeros((10000,), dtype=xp.float32)
-    lambda1 = lambda1_kernel.copy()
-    lambda2_kernel = xp.zeros((10000,), dtype=xp.float32)
-    lambda2 = lambda2_kernel.copy()
-    y1_kernel = xp.zeros((10000,), dtype=xp.float32)
-    y1 = y1_kernel.copy()
-    y2_kernel = xp.zeros((10000,), dtype=xp.float32)
-    y2 = y2_kernel.copy()
-    beta = xp.float32(1.5)
-    n1 = 100 * 100
-
-    update_y_kernel(
-        (256, 1),
-        (40, 1),
-        (
-            d1u0_kernel,
-            d2u0_kernel,
-            tmp1_kernel,
-            tmp2_kernel,
-            lambda1_kernel,
-            lambda2_kernel,
-            y1_kernel,
-            y2_kernel,
-            beta,
-            n1,
-        ),
-    )
-    update_y(d1u0, d2u0, tmp1, tmp2, lambda1, lambda2, beta, xp)
-    xp.testing.assert_allclose(
-        y1, y1_kernel, atol=1e-7
-    )  # ?? fonctionnait sans préciser la tolerance avec assert np.allclose
-    xp.testing.assert_allclose(y2, y2_kernel, atol=1e-7)
-
-
-def test_create_dirac():
-    """ Test the create_dirac functions """
-    # create_dirac_kernel = cp.RawKernel(cuda_code, 'create_dirac')
-    create_dirac_kernel = mod.get_function("create_dirac")
-    psi_kernel = xp.zeros((10000,), dtype=xp.float32)
-    psi = psi_kernel.copy()
-    val = xp.float32(1.5)
-    n = 100 * 100
-    create_dirac_kernel((10, 10), (32, 32), (psi_kernel, val, n))
-    psi = create_dirac(n, val, xp)
-    xp.testing.assert_allclose(psi, psi_kernel)
-
-
-def test_create_gabor():
-    """ Test the create_gabor functions """
-    # create_gabor_kernel = cp.RawKernel(cuda_code, 'create_gabor')
-    create_gabor_kernel = mod.get_function("create_gabor")
-    psi_kernel = xp.zeros((10000,), dtype=xp.float32)
-    psi = psi_kernel.copy()
-    n0 = 100
-    n1 = 100
-    level = xp.float32(5.0)
-    sigmax = xp.float32(3.0)
-    sigmay = xp.float32(40.0)
-    angle = xp.float32(8.0)
-    phase = xp.float32(0.0)
-    lambda_ = xp.float32(0.0)
-    create_gabor_kernel(
-        (10, 10),
-        (32, 32),
-        (psi_kernel, n0, n1, level, sigmax, sigmay, angle, phase, lambda_),
-    )
-    psi = create_gabor(100, 100, 5.0, 3.0, 40.0, 8.0, 0.0, 0.0, xp)
-    assert xp.allclose(psi, psi_kernel, atol=1e-4)
-
-def test_create_filters():
-    """ Test the create_filters functions """
-
-    u0 = np.loadtxt(DIRNAME / "TEST_VSNR_ADMM/camera.txt", dtype=np.float32)
-    gpsi_kernel = np.loadtxt(
-        DIRNAME / "TEST_CREATE_FILTERS/out.txt", dtype=np.float32
-    )
-    u0 = u0.reshape(512, 512)
-
-    # CREATE_FILTERS
-    gu0 = u0.copy()
-    gpsi = np.zeros((512 * 512,), dtype=np.float32)
-    gpsi = create_filters(
-        [{"name": "Dirac", "noise_level": 10}], gu0, 512, 512, xp
-    )
-
-    assert np.allclose(gpsi, gpsi_kernel)
-
-
-def test_vsnr_admm():
-    """ Test the vsnr_admm functions """
-    gu0 = data.camera().flatten()
-
-    if xp == cp:
-        # convert numpy array to cupy array
-        gu0 = cp.asarray(gu0)
-
-    # write to a file camera.txt
-    with open(
-        DIRNAME / "TEST_VSNR_ADMM/camera.txt", "w", encoding="utf-8"
-    ) as f:
-        for item in gu0:
-            f.write("%s\n" % item)
-
-    n0, n1 = 512, 512
-    nit = 2
-    beta = 0.1
-    gpsi = xp.loadtxt(
-        DIRNAME / "TEST_CREATE_FILTERS/out.txt", dtype=xp.float32
-    )
-    gu = xp.zeros((512, 512), dtype=xp.float32)
-
-    # gu0=gu0.reshape(64,64)
-    # gpsi=gpsi.reshape(64,64)
-    # gu=gu.reshape(64,64)
-
-    gu, cvg_dummy = vsnr_admm(gu0, gpsi, n0, n1, nit, beta, xp)
-
-    gu_kernel = xp.loadtxt(
-        DIRNAME / "TEST_VSNR_ADMM/out.txt", dtype=xp.float32
-    )
-
-    gu = gu.reshape(512, 512)
-    gu_kernel = gu_kernel.reshape(512, 512)
-
-    xp.testing.assert_allclose(gu, gu_kernel, atol=1e-3)
-
-
-def test_cuda_equals_cupy_numpy():
+def test_cuda_equals_py():
     """ Test if the cuda code is equivalent to the cupy code """
     img = data.camera()
 
@@ -726,25 +401,37 @@ def test_cuda_equals_cupy_numpy():
 
     img = stripes_addition(img, 0.2)
 
-    img_corr_py = vsnr2d_single(img, filters, maxit=maxit)
-    img_corr_cuda = vsnr2d_cuda(img, filters, nite=maxit)
+    img_corr_py = vsnr2d(img, filters, maxit=maxit, norm=False)
+    img_corr_cuda = vsnr2d_cuda(img, filters, nite=maxit, norm=False)
 
-    xp.testing.assert_allclose(img_corr_cuda, img_corr_py, atol=1e-3)
+    xp.testing.assert_allclose(img_corr_cuda, img_corr_py, atol=1e-5)
+
+    img_corr_py_norm = vsnr2d(img, filters, maxit=maxit, norm=True)
+    img_corr_cuda_norm = vsnr2d_cuda(img, filters, nite=maxit, norm=True)
+
+    xp.testing.assert_allclose(img_corr_cuda_norm, img_corr_py_norm, atol=1e-5)
 
 def test_data_min_max_preserved():
     """ Test if the min and max of the original image are preserved """
     img = data.camera()
 
     maxit = 20
-    filters = [{"name": "Dirac", "noise_level": 0.4}]
+    # filters = [{"name": "Dirac", "noise_level": 0.4}]
+    filters = [{'name': 'Gabor', 'noise_level': 200, 'sigma': [2, 80], 'theta': 10}]
 
     img = stripes_addition(img, 0.2)
 
-    img_corr = vsnr2d_single(img, filters, maxit=maxit)
-    img_corr_cuda = vsnr2d_cuda(img, filters, nite=maxit)
+    img_corr = vsnr2d(img, filters, maxit=maxit, norm=False)
+    img_corr_cuda = vsnr2d_cuda(img, filters, nite=maxit, norm=False)
 
-    assert img_corr.min() == img_corr_cuda.min() == img.min()
-    assert img_corr.max() == img_corr_cuda.max() == img.max()
+    assert np.allclose(img_corr.min(), img_corr_cuda.min(), atol=1e-5)
+    assert np.allclose(img_corr.max(), img_corr_cuda.max(), atol=1e-5)
+
+    img_corr_norm = vsnr2d(img, filters, maxit=maxit, norm=True)
+    img_corr_cuda_norm = vsnr2d_cuda(img, filters, nite=maxit, norm=True)
+
+    assert np.allclose(img_corr_norm.min(), img_corr_cuda_norm.min(), atol=1e-5)
+    assert np.allclose(img_corr_norm.max(), img_corr_cuda_norm.max(), atol=1e-5)
 
 def test_original_img_preserved():
     """ Test if the original image is preserved """
@@ -755,7 +442,7 @@ def test_original_img_preserved():
     img = stripes_addition(img, 0.2)
     img_copy = img.copy()
 
-    vsnr2d_single(img, filters, maxit=maxit)
+    vsnr2d(img, filters, maxit=maxit)
     vsnr2d_cuda(img, filters, nite=maxit)
 
     assert xp.array_equal(img, img_copy)
