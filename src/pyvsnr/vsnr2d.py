@@ -336,6 +336,9 @@ def vsnr2d_py(
             img_corr.max() - img_corr.min()
         )
         img_corr = vmin + img_corr * (vmax - vmin)
+    elif np.issubdtype(dtype, np.integer):
+        # If dtype is integer, clip at its maximum value to avoid overflow
+        img_corr = np.clip(img_corr, 0, np.iinfo(dtype).max)
 
     # cast to original dtype
     img_corr = img_corr.astype(dtype)

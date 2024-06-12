@@ -131,6 +131,9 @@ def vsnr2d_cuda(img, filters, nite=20, beta=10., nblocks='auto', norm=True):
         img_corr = np.clip(img_corr, 0, 1)
         img_corr = (img_corr - img_corr.min()) / (img_corr.max() - img_corr.min())
         img_corr = vmin + img_corr * (vmax - vmin)
+    elif np.issubdtype(dtype, np.integer):
+        # If dtype is integer, clip at its maximum value to avoid overflow
+        img_corr = np.clip(img_corr, 0, np.iinfo(dtype).max)
 
     # recast to original dtype
     img_corr = img_corr.astype(dtype)
