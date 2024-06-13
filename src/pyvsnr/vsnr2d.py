@@ -339,11 +339,6 @@ def vsnr2d_py(
     # Handle cupy to numpy conversion if needed
     if hasattr(imgs_corr, 'get'):
         imgs_corr = imgs_corr.get()
-    try:
-        if xp == cp:
-            imgs_corr = imgs_corr.get()
-    except:
-        pass
 
     # Remove the extra dimension from the output if the original input was a 2D array
     imgs_corr = xp.squeeze(imgs_corr)
