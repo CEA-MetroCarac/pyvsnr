@@ -337,6 +337,8 @@ def vsnr2d_py(
     imgs_corr = imgs_corr.astype(dtype)
 
     # Handle cupy to numpy conversion if needed
+    if hasattr(imgs_corr, 'get'):
+        imgs_corr = imgs_corr.get()
     try:
         if xp == cp:
             imgs_corr = imgs_corr.get()
@@ -422,8 +424,8 @@ def vsnr2d(
         print(f"Using {algo} algorithm")
 
     # TODO Global normalization
-    # TODO optionally take file path as input, load and process concurrently ?
-    # TODO auto set batch size based on user input MAX_GPU_MEM and image size
+    # TODO optionally take file path as input, load and process concurrently ? pyvsnr 2.2.0
+    # TODO auto set batch size based on user input MAX_GPU_MEM and image size pyvsnr 2.2.0
 
     if algo == 'cupy':
         return vsnr2d_py(

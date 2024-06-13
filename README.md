@@ -19,7 +19,7 @@ pip install git+https://github.com/CEA-MetroCarac/pyvsnr.git
 ```
 
 In case of problem during CUDA execution (typically OSError or 'access memory error'),
-it may be necessary to **recompile** the shared library from source (see below).
+it may be necessary to **recompile** the shared library from source ([see below](#shared-library-re-compilation)).
 
 ## Requirements
 
@@ -65,14 +65,15 @@ imgs_corr_py = vsnr2d(imgs, filters) # Output is a 3D array (10, 100, 100)
 
 By default, the `vsnr2d` function uses auto detection to determine whether to use the CPU or GPU implementation. If CuPy is installed, it will use it, otherwise it will try to use the CUDA implementation. If neither are available, it will fall back to the NumPy CPU implementation.
 
-If you want to choose the algorithm to use, you can do so using the `algo` argument. The possible values are `'auto'`, `'cuda'`, `'cupy'`, and `'numpy'`. The default value is `'auto'`.
+If you want to choose the algorithm to use, you can do so using the `algo` argument. The possible values are `'auto'`, `'cupy'`, `'cuda'`, and `'numpy'`. The default value is `'auto'`.
 
 Please note that the CUDA implementation doesn't support batch processing, you can still pass 3D arrays but it'll process them one at a time.
 
 ```python
 # Compute VSNR using CUDA
 from pyvsnr import vsnr2d
-img_corr_cuda = vsnr2d(img, filters, algo='cuda')
+img_corr_cuda = vsnr2d(img, filters, algo='cuda') # OK
+imgs_corr_cuda = vsnr2d(imgs, filters, algo='cuda') # Will process images one at a time
 ```
 
 The `cvg_threshold` parameter is a stopping criterion based on the relative-change of the denoised image between successive iterations.
