@@ -156,12 +156,12 @@ def peak_signal_noise_ratio(image_true, image_test, *, data_range=None):
     return 10 * np.log10((data_range**2) / err)
 
 
-def print_psnr(img, noisy_img, img_corr_py, img_corr_cuda):
+def print_psnr(img, noisy_img, img_corr_py, img_corr_cuda, data_range=None):
     """ Print the PSNR of the noisy image, the CUDA corrected image and the Python """
 
-    psnr_noisy = peak_signal_noise_ratio(img, noisy_img)
-    psnr_corrected_cuda = peak_signal_noise_ratio(img, img_corr_cuda)
-    psnr_corrected_py = peak_signal_noise_ratio(img, img_corr_py)
+    psnr_noisy = peak_signal_noise_ratio(img, noisy_img, data_range=data_range)
+    psnr_corrected_cuda = peak_signal_noise_ratio(img, img_corr_cuda, data_range=data_range)
+    psnr_corrected_py = peak_signal_noise_ratio(img, img_corr_py, data_range=data_range)
 
     print(
         "\033[95m"
