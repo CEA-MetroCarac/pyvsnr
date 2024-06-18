@@ -80,9 +80,7 @@ def update_y(d1u0, d2u0, tmp1, tmp2, lambda1, lambda2, beta, xp):
     """
     t1 = d1u0 - (tmp1 + (lambda1 / beta))
     t2 = d2u0 - (tmp2 + (lambda2 / beta))
-    ng = (
-        xp.sqrt(xp.add(xp.square(t1), xp.square(t2))) + xp.finfo(float).eps
-    )  # Adding a small epsilon to avoid division by zero
+    ng = xp.hypot(t1, t2) + xp.finfo(float).eps  # epsilon to avoid division by zero
     mask = ng > 1.0 / beta
 
     coef = 1.0 - (1.0 / (beta * ng))
