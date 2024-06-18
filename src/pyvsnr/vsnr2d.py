@@ -158,6 +158,7 @@ def create_filters(filters, gu0, n0, n1, xp):
     # Computes the l2 norm of u0 on GPU
     fsum = 0
     norm = xp.linalg.norm(gu0)
+    n0n1 = xp.float32(n0 * n1)
 
     # Computes fd1
     fd1 = setd1(n0, n1, xp)  # // d1[0] = 1; d1[n1-1] = -1;
@@ -193,7 +194,7 @@ def create_filters(filters, gu0, n0, n1, xp):
         imax = xp.unravel_index(xp.argmax(xp.abs(ftmp)), ftmp.shape)
         max2 = ftmp[imax]
         nmax = max(max1, max2)
-        alpha = xp.sqrt(n0*n1) * (n0*n1)**2 * nmax / (norm * eta)
+        alpha = xp.sqrt(n0n1) * (n0n1)**2 * nmax / (norm * eta)
 
         fsum = update_psi(psitemp, fsum, alpha, xp)  # fsum += |psitemp|^2 / alpha_i;
 
@@ -206,6 +207,7 @@ def create_filters(filters, gu0, n0, n1, xp):
 def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     """Denoise the image u0 using the VSNR algorithm."""
     batch_size = u0.shape[0]
+    n0n1 = xp.float32(n0 * n1)
 
     lambda1 = xp.zeros((batch_size, n0, n1), dtype=xp.float32)
     lambda2 = xp.zeros((batch_size, n0, n1), dtype=xp.float32)
@@ -226,12 +228,12 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     # Computes d1u0
     ftmp1 = xp.multiply(fd1, fu0)
     d1u0 = xp.real(xp.fft.ifft2(ftmp1, norm="forward"))
-    d1u0 = xp.divide(d1u0, n0*n1)
+    d1u0 = xp.divide(d1u0, n0n1)
 
     # Computes d2u0
     ftmp2 = xp.multiply(fd2, fu0)
     d2u0 = xp.real(xp.fft.ifft2(ftmp2, norm="forward"))
-    d2u0 = xp.divide(d2u0, n0*n1)
+    d2u0 = xp.divide(d2u0, n0n1)
 
     # Computes fphi1 and fphi2
     fphi1 = xp.multiply(fpsi, fd1)
@@ -263,8 +265,8 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
         ftmp2 = xp.multiply(fphi2, fx)
         ftmp1 = xp.fft.ifft2(ftmp1, norm="forward").real
         ftmp2 = xp.fft.ifft2(ftmp2, norm="forward").real
-        ftmp1 = xp.divide(ftmp1, n0*n1)
-        ftmp2 = xp.divide(ftmp2, n0*n1)
+        ftmp1 = xp.divide(ftmp1, n0n1)
+        ftmp2 = xp.divide(ftmp2, n0n1)
 
         y1, y2 = update_y(d1u0, d2u0, ftmp1, ftmp2, lambda1, lambda2, beta, xp)
 
@@ -283,7 +285,7 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     # Last but not the least : u = u0 - (psi * x)
     ftmp1 = xp.multiply(fx, fpsi)
     u = xp.fft.ifft2(ftmp1, norm="forward").real
-    u = xp.divide(u, n0*n1)
+    u = xp.divide(u, n0n1)
     u = xp.subtract(u0, u)
 
     return u, cvg_criteria
