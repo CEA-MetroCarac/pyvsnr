@@ -313,7 +313,7 @@ def vsnr2d_py(
 
     if norm:
         imgs = (imgs - vmin[:, None, None]) / (vmax[:, None, None] - vmin[:, None, None])
-        vmax_norm = xp.ones(batch_size)
+        vmax_norm = xp.ones(batch_size, dtype=xp.float32)
     else:
         vmax_norm = vmax
 
