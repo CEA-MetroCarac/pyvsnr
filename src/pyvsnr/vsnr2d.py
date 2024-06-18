@@ -29,11 +29,7 @@ def compute_phi(fphi1, fphi2, beta, xp):
     # Compute the value of fphi
     fphi = 1 + beta * (fphi1_squared_real + fphi2_squared_real)
 
-    # Create a complex CuPy array with the computed values of fphi
-    fphi_complex = xp.zeros_like(fphi, dtype=xp.complex64)
-    fphi_complex.real = fphi
-
-    return fphi_complex
+    return fphi
 
 
 def update_psi(fpsitemp, fsum, alpha, xp):
@@ -98,7 +94,7 @@ def update_y(d1u0, d2u0, tmp1, tmp2, lambda1, lambda2, beta, xp):
 
 def setd1(n0, n1, xp):
     """Set the values of d1."""
-    d1 = xp.zeros((n0, n1), dtype=xp.complex64)
+    d1 = xp.zeros((n0, n1), dtype=xp.float32)
     d1[0, 0] = 1
     d1[0, n1 - 1] = -1
 
@@ -107,7 +103,7 @@ def setd1(n0, n1, xp):
 
 def setd2(n0, n1, xp):
     """Set the values of d2."""
-    d2 = xp.zeros((n0, n1), dtype=xp.complex64)
+    d2 = xp.zeros((n0, n1), dtype=xp.float32)
     d2[0, 0] = 1
     d2[n0 - 1, 0] = -1
 
@@ -143,7 +139,7 @@ def create_filters_batch(filters, gu0, n0, n1, xp):
     The calculated filters are stored in the gpsi array.
     """
     batch_size, _, _ = gu0.shape
-    gpsi = xp.zeros((batch_size, n0, n1), dtype=xp.complex64)
+    gpsi = xp.zeros((batch_size, n0, n1), dtype=xp.float32)
 
     for i in range(batch_size):
         gpsi[i] = create_filters(filters, gu0[i], n0, n1, xp)
@@ -162,12 +158,12 @@ def create_filters(filters, gu0, n0, n1, xp):
 
     # Computes fd1
     fd1 = setd1(n0, n1, xp)  # // d1[0] = 1; d1[n1-1] = -1;
-    fd1 = xp.fft.fft2(fd1)
+    fd1 = xp.fft.rfft2(fd1)
     fd1 = xp.abs(fd1)  # // fd1 = |fd1|;
 
     # Computes fd2
     fd2 = setd2(n0, n1, xp)  # // d2[0] = 1; d2[(n0-1)*n1] = -1;
-    fd2 = xp.fft.fft2(fd2)
+    fd2 = xp.fft.rfft2(fd2)
     fd2 = xp.abs(fd2)
 
     # Computes PSI = sum_{i=1}^m |PSI_i|^2/alpha_i, where alpha_i is defined in the paper.
@@ -182,7 +178,7 @@ def create_filters(filters, gu0, n0, n1, xp):
             psitemp = create_gabor(n0, n1, 1, sigma[0], sigma[1], theta, 0, 0, xp)
             eta = filt["noise_level"]
 
-        psitemp = xp.fft.fft2(psitemp)
+        psitemp = xp.fft.rfft2(psitemp)
 
         psitemp = xp.square(xp.abs(psitemp))  # // psitemp = |psitemp|^2;)
 
@@ -199,7 +195,7 @@ def create_filters(filters, gu0, n0, n1, xp):
         fsum = update_psi(psitemp, fsum, alpha, xp)  # fsum += |psitemp|^2 / alpha_i;
 
     fsum = xp.sqrt(fsum)  # // fsum = sqrtf(fsum);
-    gpsi = xp.fft.ifft2(fsum, norm="forward")
+    gpsi = xp.fft.irfft2(fsum, norm="forward", s=(n0, n1))
 
     return gpsi
 
@@ -214,25 +210,25 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     y1 = xp.zeros((batch_size, n0, n1), dtype=xp.float32)
     y2 = xp.zeros((batch_size, n0, n1), dtype=xp.float32)
 
-    fu0 = xp.fft.fft2(u0)
-    fpsi = xp.fft.fft2(psi)
+    fu0 = xp.fft.rfft2(u0)
+    fpsi = xp.fft.rfft2(psi)
 
     # Computes fd1
     fd1 = setd1(n0, n1, xp)
-    fd1 = xp.fft.fft2(fd1)
+    fd1 = xp.fft.rfft2(fd1)
 
     # Computes fd2
     fd2 = setd2(n0, n1, xp)
-    fd2 = xp.fft.fft2(fd2)
+    fd2 = xp.fft.rfft2(fd2)
 
     # Computes d1u0
     ftmp1 = xp.multiply(fd1, fu0)
-    d1u0 = xp.real(xp.fft.ifft2(ftmp1, norm="forward"))
+    d1u0 = xp.fft.irfft2(ftmp1, norm="forward", s=(n0, n1))
     d1u0 = xp.divide(d1u0, n0n1)
 
     # Computes d2u0
     ftmp2 = xp.multiply(fd2, fu0)
-    d2u0 = xp.real(xp.fft.ifft2(ftmp2, norm="forward"))
+    d2u0 = xp.fft.irfft2(ftmp2, norm="forward", s=(n0, n1))
     d2u0 = xp.divide(d2u0, n0n1)
 
     # Computes fphi1 and fphi2
@@ -250,8 +246,8 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
         # First step, x update : (I+beta ATA)x = AT (-lambda+beta*ATy)
         ftmp1 = xp.subtract(xp.multiply(y1, beta), lambda1)
         ftmp2 = xp.subtract(xp.multiply(y2, beta), lambda2)
-        ftmp1 = xp.fft.fft2(ftmp1)
-        ftmp2 = xp.fft.fft2(ftmp2)
+        ftmp1 = xp.fft.rfft2(ftmp1)
+        ftmp2 = xp.fft.rfft2(ftmp2)
 
         # Computes w = conj(u) * v
         ftmp1 = xp.multiply(xp.conj(fphi1), ftmp1)
@@ -263,8 +259,8 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
         # Second step y update : y = prox_{f1/beta}(Ax+lambda/beta)
         ftmp1 = xp.multiply(fphi1, fx)
         ftmp2 = xp.multiply(fphi2, fx)
-        ftmp1 = xp.fft.ifft2(ftmp1, norm="forward").real
-        ftmp2 = xp.fft.ifft2(ftmp2, norm="forward").real
+        ftmp1 = xp.fft.irfft2(ftmp1, norm="forward", s=(n0, n1))
+        ftmp2 = xp.fft.irfft2(ftmp2, norm="forward", s=(n0, n1))
         ftmp1 = xp.divide(ftmp1, n0n1)
         ftmp2 = xp.divide(ftmp2, n0n1)
 
@@ -284,7 +280,7 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
 
     # Last but not the least : u = u0 - (psi * x)
     ftmp1 = xp.multiply(fx, fpsi)
-    u = xp.fft.ifft2(ftmp1, norm="forward").real
+    u = xp.fft.irfft2(ftmp1, norm="forward", s=(n0, n1))
     u = xp.divide(u, n0n1)
     u = xp.subtract(u0, u)
 
