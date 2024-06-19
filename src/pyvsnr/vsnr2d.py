@@ -110,22 +110,26 @@ def setd2(n0, n1, xp):
 
 def compute_vsnr(filters, u0, n0, n1, nit, beta, vmax, xp, cvg_threshold):
     """Calculate the corrected image using the 2D-VSNR algorithm"""
+    gu = xp.zeros_like(u0, dtype=xp.float32)
+
+    gu0 = u0.copy()
     gpsi = xp.zeros_like(u0, dtype=xp.float32)
 
-    u0 /= vmax[:, None, None]
+    gu0 = xp.divide(gu0, vmax[:, None, None])
 
     # 2. Prepares filters
-    gpsi = create_filters_batch(filters, u0, n0, n1, xp)
+    gpsi = create_filters_batch(filters, gu0, n0, n1, xp)
 
     # 3. Denoises the image
-    u0, cvg_criteria = vsnr_admm(
-        u0, gpsi, n0, n1, nit, beta, xp, cvg_threshold=cvg_threshold
+    gu, cvg_criteria = vsnr_admm(
+        gu0, gpsi, n0, n1, nit, beta, xp, cvg_threshold=cvg_threshold
     )
 
     # 4. Copies the result to u
-    u0 *= vmax[:, None, None]
+    gu = xp.multiply(gu, vmax[:, None, None])
+    u = xp.copy(gu)
 
-    return u0, cvg_criteria
+    return u, cvg_criteria
 
 def create_filters_batch(filters, gu0, n0, n1, xp):
     """
