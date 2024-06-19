@@ -414,10 +414,6 @@ def vsnr2d(
     if verbose:
         print(f"Using {algo} algorithm")
 
-    # TODO Global normalization
-    # TODO optionally take file path as input, load and process concurrently ? pyvsnr 2.2.0
-    # TODO auto set batch size based on user input MAX_GPU_MEM and image size pyvsnr 2.2.0
-
     if algo == 'cupy':
         return vsnr2d_py(
             imgs,
@@ -441,6 +437,11 @@ def vsnr2d(
         )
 
     elif algo == 'numpy':
+        # Enable pyfftw to replace numpy.fft
+        import pyfftw
+        pyfftw.interfaces.cache.enable()
+        np.fft = pyfftw.interfaces.numpy_fft
+        
         return vsnr2d_py(
             imgs,
             filters,

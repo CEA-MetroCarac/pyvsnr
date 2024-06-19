@@ -1,3 +1,14 @@
+<!--
+TODO Pyvsnr 2.2.0:
+    TODO NumPy 2.0.0 support when CuPy (v14 will) and pyfftw support it
+        TODO int to float32 still needed for CuPy ?
+    TODO optionally take file path as input, load and process concurrently ?
+        TODO Load Directly onto GPU for CuPy using nvimagecodec. https://github.com/NVIDIA/nvImageCodec/issues/5 fixed ?
+        TODO auto set batch size based on user input MAX_GPU_MEM and image size
+        TODO Use threading to overlap datatransfer with vsnr2d calls to speed up process
+    TODO Speed up using User Managed FFT Plan
+    TODO Speed up using less kernels thanks to User Kernel, currently 45 CUDA kernels     
+-->
 # pyvsnr
 
 ![](https://raw.githubusercontent.com/CEA-MetroCarac/pyvsnr/main/tests/images/fib_sem_corr.png)
@@ -30,6 +41,7 @@ packages for examples and tests running.
 For **GPU** execution, a working CUDA installation is necessary wether you want to use the CUDA version directly or the cupy one. We recommend using the [CuPy](https://cupy.dev) library, which was 10x faster in the tests. Please ensure that you install the correct version of CuPy that corresponds to your CUDA version (for example, if you're using CUDA 12.x, you should install `cupy-cuda12x`). See the [installation instructions](https://docs.cupy.dev/en/stable/install.html) for more details.
 
 - numpy
+- pyfftw
 - cupy (**optional** but strongly recommended, allows for GPU computation)
 - matplotlib, scikit-image (**optional**, for examples and tests execution only)
 
