@@ -23,11 +23,11 @@ except ImportError:
 def compute_phi(fphi1, fphi2, beta, xp):
     """Compute the value of fphi based on the values of fphi1, fphi2, and beta."""
     # Compute the squares of the real and imaginary parts of fphi1 and fphi2
-    fphi1_squared_real = xp.square(xp.abs(fphi1))
-    fphi2_squared_real = xp.square(xp.abs(fphi2))
+    fphi1 = xp.square(xp.abs(fphi1))
+    fphi2 = xp.square(xp.abs(fphi2))
 
     # Compute the value of fphi
-    fphi = 1 + beta * (fphi1_squared_real + fphi2_squared_real)
+    fphi = 1 + beta * (fphi1 + fphi2)
 
     return fphi
 
@@ -35,7 +35,7 @@ def compute_phi(fphi1, fphi2, beta, xp):
 def update_psi(fpsitemp, fsum, alpha, xp):
     """Update the value of fsum based on the values of fpsitemp, fsum, and alpha."""
     # // fsum += |fpsitemp|^2 / alpha_i;
-    fsum = xp.add(fsum, xp.divide(fpsitemp, alpha))
+    fsum += xp.divide(fpsitemp, alpha)
     return fsum
 
 
@@ -110,26 +110,22 @@ def setd2(n0, n1, xp):
 
 def compute_vsnr(filters, u0, n0, n1, nit, beta, vmax, xp, cvg_threshold):
     """Calculate the corrected image using the 2D-VSNR algorithm"""
-    gu = xp.zeros_like(u0, dtype=xp.float32)
-
-    gu0 = u0.copy()
     gpsi = xp.zeros_like(u0, dtype=xp.float32)
 
-    gu0 = xp.divide(gu0, vmax[:, None, None])
+    u0 /= vmax[:, None, None]
 
     # 2. Prepares filters
-    gpsi = create_filters_batch(filters, gu0, n0, n1, xp)
+    gpsi = create_filters_batch(filters, u0, n0, n1, xp)
 
     # 3. Denoises the image
-    gu, cvg_criteria = vsnr_admm(
-        gu0, gpsi, n0, n1, nit, beta, xp, cvg_threshold=cvg_threshold
+    u0, cvg_criteria = vsnr_admm(
+        u0, gpsi, n0, n1, nit, beta, xp, cvg_threshold=cvg_threshold
     )
 
     # 4. Copies the result to u
-    gu = xp.multiply(gu, vmax[:, None, None])
-    u = xp.copy(gu)
+    u0 *= vmax[:, None, None]
 
-    return u, cvg_criteria
+    return u0, cvg_criteria
 
 def create_filters_batch(filters, gu0, n0, n1, xp):
     """
@@ -222,12 +218,12 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     # Computes d1u0
     ftmp1 = xp.multiply(fd1, fu0)
     d1u0 = xp.fft.irfft2(ftmp1, norm="forward", s=(n0, n1))
-    d1u0 = xp.divide(d1u0, n0n1)
+    d1u0 /= n0n1
 
     # Computes d2u0
     ftmp2 = xp.multiply(fd2, fu0)
     d2u0 = xp.fft.irfft2(ftmp2, norm="forward", s=(n0, n1))
-    d2u0 = xp.divide(d2u0, n0n1)
+    d2u0 /= n0n1
 
     # Computes fphi1 and fphi2
     fphi1 = xp.multiply(fpsi, fd1)
@@ -248,8 +244,8 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
         ftmp2 = xp.fft.rfft2(ftmp2)
 
         # Computes w = conj(u) * v
-        ftmp1 = xp.multiply(xp.conj(fphi1), ftmp1)
-        ftmp2 = xp.multiply(xp.conj(fphi2), ftmp2)
+        ftmp1 *= xp.conj(fphi1)
+        ftmp2 *= xp.conj(fphi2)
 
         # fx = (tmp1 + tmp2) / fphi;
         fx = xp.divide(xp.add(ftmp1, ftmp2), fphi)
@@ -259,14 +255,14 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
         ftmp2 = xp.multiply(fphi2, fx)
         ftmp1 = xp.fft.irfft2(ftmp1, norm="forward", s=(n0, n1))
         ftmp2 = xp.fft.irfft2(ftmp2, norm="forward", s=(n0, n1))
-        ftmp1 = xp.divide(ftmp1, n0n1)
-        ftmp2 = xp.divide(ftmp2, n0n1)
+        ftmp1 /= n0n1
+        ftmp2 /= n0n1
 
         y1, y2 = update_y(d1u0, d2u0, ftmp1, ftmp2, lambda1, lambda2, beta, xp)
 
         # Third step lambda update : lambda = lambda + beta * (Ax - y)
-        lambda1 = lambda1 + xp.multiply(beta, xp.subtract(ftmp1, y1))
-        lambda2 = lambda2 + xp.multiply(beta, xp.subtract(ftmp2, y2))
+        lambda1 += xp.multiply(beta, xp.subtract(ftmp1, y1))
+        lambda2 += xp.multiply(beta, xp.subtract(ftmp2, y2))
 
         if i != 0:
             cvg_criterion = float(
@@ -279,7 +275,7 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     # Last but not the least : u = u0 - (psi * x)
     ftmp1 = xp.multiply(fx, fpsi)
     u = xp.fft.irfft2(ftmp1, norm="forward", s=(n0, n1))
-    u = xp.divide(u, n0n1)
+    u /= n0n1
     u = xp.subtract(u0, u)
 
     return u, cvg_criteria
