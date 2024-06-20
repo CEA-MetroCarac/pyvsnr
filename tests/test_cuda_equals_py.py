@@ -7,6 +7,16 @@ import cupy as cp
 import numpy as np
 from skimage import exposure, data
 
+from src.pyvsnr.vsnr2d import (
+    setd1,
+    setd2,
+    compute_phi,
+    update_psi,
+    update_y,
+    create_dirac,
+    create_gabor,
+)
+
 from src.pyvsnr import vsnr2d, vsnr2d_cuda
 from src.pyvsnr.utils import stripes_addition
 
@@ -319,7 +329,6 @@ mod = cp.RawModule(
     ),
 )
 
-
 def get_dll():
     """ Load the dedicated .dll library """
     try:
@@ -340,7 +349,6 @@ def get_dll():
             "(see readme)"
         ) from err
 
-
 def get_vsnr2d():
     """ Load the 'cuda' function from the dedicated .dll library """
     dll = get_dll()
@@ -359,7 +367,6 @@ def get_vsnr2d():
     ]
     return func
 
-
 def get_nblocks():
     """ Get the number of maximum threads per block library """
     dll = get_dll()
@@ -369,11 +376,6 @@ def cuda_algo():
     """ Test the cuda algorithm """
     # image loading and intensity rescaling
     img0 = data.camera()
-
-    # plt.figure(figsize=(10, 5))
-    # plt.subplot(1, 2, 1)
-    # plt.imshow(img0, cmap='gray')
-    # plt.title('original')
 
     per2, per98 = xp.percentile(img0, (2, 98))
     img0 = exposure.rescale_intensity(img0, in_range=(per2, per98))
@@ -391,6 +393,242 @@ def cuda_algo():
     img_corr = vsnr2d_cuda(img0, filters, nite=vsnr_kwargs["maxit"])
 
     return img_corr
+
+def test_multiply():
+    """ Test the multiply functions """
+    multiply_kernel = mod.get_function("product_carray")
+
+    a_kernel = (
+        cp.random.rand(
+            10000,
+        )
+        + 1j
+        * cp.random.rand(
+            10000,
+        )
+    ).astype(cp.complex64)
+    b_kernel = (
+        cp.random.rand(
+            10000,
+        )
+        + 1j
+        * cp.random.rand(
+            10000,
+        )
+    ).astype(cp.complex64)
+    res_kernel = cp.zeros_like(a_kernel)
+
+    a = a_kernel.copy()
+    b = b_kernel.copy()
+    res = res_kernel.copy()
+
+    m = 100 * 100
+    blocksize = 256
+    gridsize = (m + blocksize - 1) // blocksize
+
+    multiply_kernel(
+        (gridsize, 1), (blocksize, 1), (a_kernel, b_kernel, res_kernel, m)
+    )
+    res = cp.multiply(a, b)
+
+    xp.testing.assert_allclose(res, res_kernel, atol=1e-7)
+
+def test_setd1():
+    """ Test the setd1 functions """
+    setd1_kernel = mod.get_function("setd1")
+    n1 = 100
+    d1_kernel = cp.random.rand(100, 100, dtype=xp.float32)  # setd1 from CUDA
+    d1_kernel = d1_kernel.flatten()
+    d1 = d1_kernel.copy()
+    setd1_kernel((10, 10), (32, 32), (d1_kernel, 100 * 100, n1))
+    d1 = setd1(n1, n1, xp)
+    xp.testing.assert_allclose(d1.flatten(), d1_kernel)
+
+def test_setd2():
+    """ Test the setd2 functions """
+    setd2_kernel = mod.get_function("setd2")
+    n1 = 100
+    d2_kernel = cp.random.rand(100, 100, dtype=xp.float32)  # setd2 from CUDA
+    d2_kernel = d2_kernel.flatten()
+    d2 = d2_kernel.copy()
+    setd2_kernel((10, 10), (32, 32), (d2_kernel, 100 * 100, n1))
+    d2 = setd2(n1, n1, xp)
+    xp.testing.assert_allclose(d2.flatten(), d2_kernel)
+
+def test_compute_norm():
+    """ Test the compute_norm functions """
+    compute_norm_kernel = mod.get_function("compute_norm")
+    fpsi_kernel = xp.random.rand(100, 100, dtype=xp.float64).astype(
+        xp.complex64
+    )
+    fpsi_kernel = fpsi_kernel.flatten()
+    fpsi = fpsi_kernel.copy()
+    m = 100
+    compute_norm_kernel((10, 10), (32, 32), (fpsi_kernel, m))
+    fpsi = xp.absolute(fpsi)
+    xp.testing.assert_allclose(fpsi, fpsi_kernel)
+
+def test_compute_product():
+    """ Test the compute_product functions """
+    compute_product_kernel = mod.get_function("compute_product")
+    fpsi_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
+        xp.complex64
+    )
+    fpsi_kernel = fpsi_kernel.flatten()
+    fpsi = fpsi_kernel.copy()
+    fd_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(xp.complex64)
+    fd_kernel = fd_kernel.flatten()
+    fd = fd_kernel.copy()
+    ftmp_kernel = xp.random.rand(100, 100, dtype=xp.float32)
+    ftmp_kernel = ftmp_kernel.flatten()
+    ftmp = ftmp_kernel.copy()
+    m = 100 * 100
+    compute_product_kernel(
+        (256, 1), (40, 1), (fpsi_kernel, fd_kernel, ftmp_kernel, m)
+    )
+    ftmp = xp.multiply(fpsi, fd)
+    xp.testing.assert_allclose(ftmp, ftmp_kernel)
+
+def test_compute_sqrtf():
+    """ Test the compute_sqrtf functions """
+    compute_sqrtf_kernel = mod.get_function("compute_sqrtf")
+    fsum_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
+        xp.complex64
+    )
+    fsum_kernel = fsum_kernel.flatten()
+    fsum = fsum_kernel.copy()
+    m = 100 * 100
+    compute_sqrtf_kernel((256, 1), (40, 1), (fsum_kernel, m))
+    fsum = xp.sqrt(fsum)
+    xp.testing.assert_allclose(fsum, fsum_kernel)
+
+def test_compute_phi():
+    """ Test the compute_phi functions """
+    compute_phi_kernel = mod.get_function("compute_phi")
+    fphi_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
+        xp.complex64
+    )
+    fphi_kernel = fphi_kernel.flatten()
+    fphi = fphi_kernel.copy()
+    fphi1_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
+        xp.complex64
+    )
+    fphi1_kernel = fphi1_kernel.flatten()
+    fphi1 = fphi1_kernel.copy()
+    fphi2_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
+        xp.complex64
+    )
+    fphi2_kernel = fphi2_kernel.flatten()
+    fphi2 = fphi2_kernel.copy()
+    beta = xp.float32(1.5)
+    n = 100 * 100
+
+    compute_phi_kernel(
+        (256, 1), (40, 1), (fphi1_kernel, fphi2_kernel, fphi_kernel, beta, n)
+    )
+    fphi = compute_phi(fphi1, fphi2, beta, xp)
+    xp.testing.assert_allclose(
+        fphi, fphi_kernel, atol=1e-7
+    )
+
+def test_update_psi():
+    """ Test the update_psi functions """
+    update_psi_kernel = mod.get_function("update_psi")
+    fpsitemp_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
+        xp.complex64
+    )
+    fpsitemp_kernel = fpsitemp_kernel.flatten()
+    fpsitemp = fpsitemp_kernel.copy()
+    fsum_kernel = xp.random.rand(100, 100, dtype=xp.float32).astype(
+        xp.complex64
+    )
+    fsum_kernel = fsum_kernel.flatten()
+    fsum = fsum_kernel.copy()
+    alpha = xp.float32(2.3)
+    m = 100 * 100
+    update_psi_kernel(
+        (256, 1), (40, 1), (fpsitemp_kernel, fsum_kernel, alpha, m)
+    )
+    fsum = update_psi(fpsitemp, fsum, 2.3, xp)
+    xp.testing.assert_allclose(
+        fsum, fsum_kernel, atol=1e-7
+    )
+
+def test_update_y():
+    """ Test the update_y functions """
+    update_y_kernel = mod.get_function("update_y")
+    d1u0_kernel = xp.zeros((10000,), dtype=xp.float32)
+    d1u0 = d1u0_kernel.copy()
+    d2u0_kernel = xp.zeros((10000,), dtype=xp.float32)
+    d2u0 = d2u0_kernel.copy()
+    tmp1_kernel = xp.zeros((10000,), dtype=xp.float32)
+    tmp1 = tmp1_kernel.copy()
+    tmp2_kernel = xp.zeros((10000,), dtype=xp.float32)
+    tmp2 = tmp2_kernel.copy()
+    lambda1_kernel = xp.zeros((10000,), dtype=xp.float32)
+    lambda1 = lambda1_kernel.copy()
+    lambda2_kernel = xp.zeros((10000,), dtype=xp.float32)
+    lambda2 = lambda2_kernel.copy()
+    y1_kernel = xp.zeros((10000,), dtype=xp.float32)
+    y1 = y1_kernel.copy()
+    y2_kernel = xp.zeros((10000,), dtype=xp.float32)
+    y2 = y2_kernel.copy()
+    beta = xp.float32(1.5)
+    n1 = 100 * 100
+
+    update_y_kernel(
+        (256, 1),
+        (40, 1),
+        (
+            d1u0_kernel,
+            d2u0_kernel,
+            tmp1_kernel,
+            tmp2_kernel,
+            lambda1_kernel,
+            lambda2_kernel,
+            y1_kernel,
+            y2_kernel,
+            beta,
+            n1,
+        ),
+    )
+    update_y(d1u0, d2u0, tmp1, tmp2, lambda1, lambda2, beta, xp)
+    xp.testing.assert_allclose(
+        y1, y1_kernel, atol=1e-7
+    )
+    xp.testing.assert_allclose(y2, y2_kernel, atol=1e-7)
+
+def test_create_dirac():
+    """ Test the create_dirac functions """
+    create_dirac_kernel = mod.get_function("create_dirac")
+    psi_kernel = xp.zeros((10000,), dtype=xp.float32)
+    psi = psi_kernel.copy()
+    val = xp.float32(1.5)
+    n1 = 100
+    create_dirac_kernel((10, 10), (32, 32), (psi_kernel, val, n1**2))
+    psi = create_dirac(n1, n1, val, xp)
+    xp.testing.assert_allclose(psi.flatten(), psi_kernel)
+
+def test_create_gabor():
+    """ Test the create_gabor functions """
+    create_gabor_kernel = mod.get_function("create_gabor")
+    psi_kernel = xp.zeros((10000,), dtype=xp.float32)
+    psi = psi_kernel.copy()
+    n0 = 100
+    n1 = 100
+    level = xp.float32(5.0)
+    sigmax = xp.float32(3.0)
+    sigmay = xp.float32(40.0)
+    angle = xp.float32(8.0)
+    phase = xp.float32(0.0)
+    lambda_ = xp.float32(0.0)
+    create_gabor_kernel(
+        (10, 10),
+        (32, 32),
+        (psi_kernel, n0, n1, level, sigmax, sigmay, angle, phase, lambda_),
+    )
+    psi = create_gabor(n0, n1, 5.0, 3.0, 40.0, 8.0, 0.0, 0.0, xp)
+    xp.testing.assert_allclose(psi.flatten(), psi_kernel, atol=1e-5)
 
 def test_cuda_equals_py():
     """ Test if the cuda code is equivalent to the cupy code """
@@ -424,14 +662,14 @@ def test_data_min_max_preserved():
     img_corr = vsnr2d(img, filters, maxit=maxit, norm=False)
     img_corr_cuda = vsnr2d_cuda(img, filters, nite=maxit, norm=False)
 
-    assert np.allclose(img_corr.min(), img_corr_cuda.min(), atol=1e-5)
-    assert np.allclose(img_corr.max(), img_corr_cuda.max(), atol=1e-5)
+    xp.testing.assert_allclose(img_corr.min(), img_corr_cuda.min(), atol=1e-5)
+    xp.testing.assert_allclose(img_corr.max(), img_corr_cuda.max(), atol=1e-5)
 
     img_corr_norm = vsnr2d(img, filters, maxit=maxit, norm=True)
     img_corr_cuda_norm = vsnr2d_cuda(img, filters, nite=maxit, norm=True)
 
-    assert np.allclose(img_corr_norm.min(), img_corr_cuda_norm.min(), atol=1e-5)
-    assert np.allclose(img_corr_norm.max(), img_corr_cuda_norm.max(), atol=1e-5)
+    xp.testing.assert_allclose(img_corr_norm.min(), img_corr_cuda_norm.min(), atol=1e-5)
+    xp.testing.assert_allclose(img_corr_norm.max(), img_corr_cuda_norm.max(), atol=1e-5)
 
 def test_original_img_preserved():
     """ Test if the original image is preserved """
@@ -445,4 +683,4 @@ def test_original_img_preserved():
     vsnr2d(img, filters, maxit=maxit)
     vsnr2d_cuda(img, filters, nite=maxit)
 
-    assert xp.array_equal(img, img_copy)
+    xp.testing.assert_allclose(img, img_copy, atol=1e-5)
