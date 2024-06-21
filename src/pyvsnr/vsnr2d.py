@@ -80,12 +80,13 @@ def update_y(d1u0, d2u0, tmp1, tmp2, lambda1, lambda2, beta, xp):
     """
     t1 = d1u0 - (tmp1 + (lambda1 / beta))
     t2 = d2u0 - (tmp2 + (lambda2 / beta))
-    ng = xp.hypot(t1, t2) + xp.finfo(float).eps  # epsilon to avoid division by zero
-    mask = ng > 1.0 / beta
+    ng = xp.hypot(t1, t2) + xp.finfo(xp.float32).eps  # epsilon to avoid division by zero
+    coef = xp.float32(1.0)
+    mask = ng > coef / beta
 
-    coef = 1.0 - (1.0 / (beta * ng))
-    y1 = d1u0 - mask * (t1 * coef)  # cp inf * 0 = 0
-    y2 = d2u0 - mask * (t2 * coef)  # while np inf * 0 = nan
+    coef -=  (coef / (beta * ng))
+    y1 = d1u0 - mask * (t1 * coef)
+    y2 = d2u0 - mask * (t2 * coef)
 
     return y1, y2
 
@@ -220,18 +221,18 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     fd2 = xp.fft.rfft2(fd2)
 
     # Computes d1u0
-    ftmp1 = xp.multiply(fd1, fu0)
+    ftmp1 = fd1 * fu0
     d1u0 = xp.fft.irfft2(ftmp1, norm="forward", s=(n0, n1))
     d1u0 /= n0n1
 
     # Computes d2u0
-    ftmp2 = xp.multiply(fd2, fu0)
+    ftmp2 = fd2 * fu0
     d2u0 = xp.fft.irfft2(ftmp2, norm="forward", s=(n0, n1))
     d2u0 /= n0n1
 
     # Computes fphi1 and fphi2
-    fphi1 = xp.multiply(fpsi, fd1)
-    fphi2 = xp.multiply(fpsi, fd2)
+    fphi1 = fpsi * fd1
+    fphi2 = fpsi * fd2
 
     # Computes fphi
     fphi = compute_phi(fphi1, fphi2, beta, xp)
@@ -242,8 +243,8 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     fx_old = xp.zeros((batch_size, n0, n1), dtype=xp.float32)
     while i < nit and cvg_criterion > cvg_threshold:
         # First step, x update : (I+beta ATA)x = AT (-lambda+beta*ATy)
-        ftmp1 = xp.subtract(xp.multiply(y1, beta), lambda1)
-        ftmp2 = xp.subtract(xp.multiply(y2, beta), lambda2)
+        ftmp1 = y1 * beta - lambda1
+        ftmp2 = y2 * beta - lambda2
         ftmp1 = xp.fft.rfft2(ftmp1)
         ftmp2 = xp.fft.rfft2(ftmp2)
 
@@ -251,12 +252,11 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
         ftmp1 *= xp.conj(fphi1)
         ftmp2 *= xp.conj(fphi2)
 
-        # fx = (tmp1 + tmp2) / fphi;
-        fx = xp.divide(xp.add(ftmp1, ftmp2), fphi)
+        fx = (ftmp1 + ftmp2) / fphi
 
         # Second step y update : y = prox_{f1/beta}(Ax+lambda/beta)
-        ftmp1 = xp.multiply(fphi1, fx)
-        ftmp2 = xp.multiply(fphi2, fx)
+        ftmp1 = fphi1 * fx
+        ftmp2 = fphi2 * fx
         ftmp1 = xp.fft.irfft2(ftmp1, norm="forward", s=(n0, n1))
         ftmp2 = xp.fft.irfft2(ftmp2, norm="forward", s=(n0, n1))
         ftmp1 /= n0n1
@@ -265,8 +265,8 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
         y1, y2 = update_y(d1u0, d2u0, ftmp1, ftmp2, lambda1, lambda2, beta, xp)
 
         # Third step lambda update : lambda = lambda + beta * (Ax - y)
-        lambda1 += xp.multiply(beta, xp.subtract(ftmp1, y1))
-        lambda2 += xp.multiply(beta, xp.subtract(ftmp2, y2))
+        lambda1 += beta * (ftmp1 - y1)
+        lambda2 += beta * (ftmp2 - y2)
 
         if i != 0:
             cvg_criterion = float(
@@ -277,10 +277,10 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
         i += 1
 
     # Last but not the least : u = u0 - (psi * x)
-    ftmp1 = xp.multiply(fx, fpsi)
+    ftmp1 = fx * fpsi
     u = xp.fft.irfft2(ftmp1, norm="forward", s=(n0, n1))
     u /= n0n1
-    u = xp.subtract(u0, u)
+    u = u0 - u
 
     return u, cvg_criteria
 
@@ -303,6 +303,7 @@ def vsnr2d_py(
 
     batch_size, n0, n1 = imgs.shape
     dtype = imgs.dtype
+    beta = xp.float32(beta)
 
     imgs = xp.asarray(imgs, dtype=xp.float32)
 
