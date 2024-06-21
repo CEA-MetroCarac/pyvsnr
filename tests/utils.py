@@ -15,12 +15,12 @@ from pyvsnr import vsnr2d
 
 
 def measure_vsnr(
-    img, filters, maxit=20, algo='auto', beta=10.0, nblocks="auto", norm=True
+    imgs, filters, maxit=20, algo='auto', beta=10.0, nblocks="auto", cvg_threshold=0, norm=True
 ):
     """ Measure the execution time of a vsnr2d algorithm """
     t0 = time.perf_counter()
 
-    img_corr = vsnr2d(img, filters, maxit=maxit, algo=algo, beta=beta, norm=norm)
+    img_corr = vsnr2d(imgs, filters, maxit=maxit, algo=algo, beta=beta, cvg_threshold=cvg_threshold , norm=norm)
 
     process_time = round(time.perf_counter() - t0, 3)
 
@@ -32,26 +32,26 @@ def measure_vsnr(
     return img_corr
 
 
-def measure_vsnr_cuda(img, filters, nite=20, beta=10.0, nblocks="auto", norm=True):
+def measure_vsnr_cuda(imgs, filters, nite=20, beta=10.0, nblocks="auto", norm=True):
     """ Measure the execution time of the vsnr2d_cuda algorithm """
     img_corr_cuda = measure_vsnr(
-        img, filters, algo='cuda', maxit=nite, beta=beta, nblocks=nblocks, norm=norm
+        imgs, filters, algo='cuda', maxit=nite, beta=beta, nblocks=nblocks, norm=norm
     )
     return img_corr_cuda
 
 
-def measure_vsnr_cupy(img, filters, maxit=20, beta=10.0, norm=True):
+def measure_vsnr_cupy(imgs, filters, maxit=20, beta=10.0, cvg_threshold=0, norm=True):
     """ Measure the execution time of the vsnr2d_cupy algorithm """
     img_corr_cupy = measure_vsnr(
-        img, filters, algo='cupy', maxit=maxit, beta=beta, norm=norm
+        imgs, filters, algo='cupy', maxit=maxit, beta=beta, cvg_threshold=cvg_threshold, norm=norm
     )
     return img_corr_cupy
 
 
-def measure_vsnr_numpy(img, filters, maxit=20, beta=10.0, norm=True):
+def measure_vsnr_numpy(imgs, filters, maxit=20, beta=10.0, cvg_threshold=0, norm=True):
     """ Measure the execution time of the vsnr2d_numpy algorithm """
     img_corr_numpy = measure_vsnr(
-        img, filters, algo='numpy', maxit=maxit, beta=beta, norm=norm
+        imgs, filters, algo='numpy', maxit=maxit, beta=beta, cvg_threshold=cvg_threshold, norm=norm
     )
     return img_corr_numpy
 
@@ -155,12 +155,12 @@ def peak_signal_noise_ratio(image_true, image_test, *, data_range=None):
     return 10 * np.log10((data_range**2) / err)
 
 
-def print_psnr(img, noisy_img, img_corr_py, img_corr_cuda):
+def print_psnr(img, noisy_img, img_corr_py, img_corr_cuda, data_range=None):
     """ Print the PSNR of the noisy image, the CUDA corrected image and the Python """
 
-    psnr_noisy = peak_signal_noise_ratio(img, noisy_img)
-    psnr_corrected_cuda = peak_signal_noise_ratio(img, img_corr_cuda)
-    psnr_corrected_py = peak_signal_noise_ratio(img, img_corr_py)
+    psnr_noisy = peak_signal_noise_ratio(img, noisy_img, data_range=data_range)
+    psnr_corrected_cuda = peak_signal_noise_ratio(img, img_corr_cuda, data_range=data_range)
+    psnr_corrected_py = peak_signal_noise_ratio(img, img_corr_py, data_range=data_range)
 
     print(
         "\033[95m"

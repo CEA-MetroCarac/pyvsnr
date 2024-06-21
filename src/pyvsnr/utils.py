@@ -1,5 +1,30 @@
 import numpy as np
-from pyvsnr.vsnr2d import create_gabor
+
+def create_gabor(n0, n1, level, sigmax, sigmay, angle, phase, lambda_, xp):
+    """Create a Gabor filter."""
+    psi = xp.zeros((n0, n1), dtype=xp.float32)
+
+    theta = xp.radians(angle)
+    offset_x = (n1 / 2.0) + 1.0
+    offset_y = (n0 / 2.0) + 1.0
+    phase = xp.radians(phase)
+    nn = xp.pi / xp.sqrt(sigmax * sigmay)
+
+    i = xp.arange(n1)
+    j = xp.arange(n0)
+    x, y = xp.meshgrid(i, j)
+
+    x = offset_x - x
+    y = offset_y - y
+    x_theta = x * xp.cos(theta) + y * xp.sin(theta)
+    y_theta = y * xp.cos(theta) - x * xp.sin(theta)
+
+    val = xp.exp(
+        -0.5 * ((x_theta / sigmax) ** 2 + (y_theta / sigmay) ** 2)
+    ) * xp.cos((x_theta * lambda_ / sigmax) + phase)
+    psi = level * val / nn
+
+    return psi.flatten()
 
 def pad_centered(arr, shape_ref, value=0):
     """
@@ -46,8 +71,7 @@ def pad_centered(arr, shape_ref, value=0):
 
     return arr_pad
 
-
-def curtains_addition(img_ref, seed=None, amplitude=0.2, sigma=(3, 40), angle=0, threshold=0.999, norm=True):
+def curtains_addition(img_ref, seed=None, amplitude=0.2, sigma=(3, 40), angle=0, threshold=0.999, norm=True, position=None):
     """
     Add curtains effects in a image
 
@@ -66,6 +90,8 @@ def curtains_addition(img_ref, seed=None, amplitude=0.2, sigma=(3, 40), angle=0,
     threshold: float, optional
         Parameters to select more or less curtains positions. The higher the
         threshold is, the less positions there are
+    position: str, optional
+        The position of the image to apply the effect to. Options are 'up-l', 'up-r', 'low-l', 'low-r'. If no position is specified, the effect is applied to the whole image.
 
     Returns
     -------
@@ -92,21 +118,28 @@ def curtains_addition(img_ref, seed=None, amplitude=0.2, sigma=(3, 40), angle=0,
     psi *= 0.01 / psi.max()  # renormalization
     psi = pad_centered(psi, img_ref.shape, value=0)
 
-    position = np.random.random(img_ref.shape)
-    position = (position > threshold).astype(float)
-    noise = np.fft.irfft2(np.fft.rfft2(position) * np.fft.rfft2(psi))
+    position_noise = np.random.random(img_ref.shape)
+    position_noise = (position_noise > threshold).astype(float)
+    noise = np.fft.irfft2(np.fft.rfft2(position_noise) * np.fft.rfft2(psi))
 
     noise *= amplitude / noise.max()
 
-    # if dark_curtains:
-    #     noise *= -1.
+    img = img_ref.copy()
+    if position == 'up-l':
+        img[:n0//2, :n1//2] += noise[:n0//2, :n1//2]
+    elif position == 'up-r':
+        img[:n0//2, n1//2:] += noise[:n0//2, n1//2:]
+    elif position == 'low-l':
+        img[n0//2:, :n1//2] += noise[n0//2:, :n1//2]
+    elif position == 'low-r':
+        img[n0//2:, n1//2:] += noise[n0//2:, n1//2:]
+    else:
+        img += noise
 
-    img = img_ref + noise
     if norm:
         img = np.clip(img, vmin, vmax)
 
     return img
-
 
 def stripes_addition(img_base, amplitude, seed=None, norm=True):
     """ Add stripes defects in a image """
@@ -126,7 +159,6 @@ def stripes_addition(img_base, amplitude, seed=None, norm=True):
         noisy_img = np.clip(noisy_img, 0, 1)
 
     return noisy_img
-
 
 def add_gaussian_noise(img, scale=0.1):
     """ Add gaussian noise in a image """

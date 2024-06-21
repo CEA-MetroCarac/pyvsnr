@@ -1,3 +1,14 @@
+<!--
+TODO Pyvsnr 2.2.0:
+    TODO NumPy 2.0.0 support when CuPy (v14 will) and pyfftw support it
+        TODO int to float32 still needed for CuPy ?
+    TODO optionally take file path as input, load and process concurrently ?
+        TODO Load Directly onto GPU for CuPy using nvimagecodec. https://github.com/NVIDIA/nvImageCodec/issues/5 fixed ?
+        TODO auto set batch size based on user input MAX_GPU_MEM and image size
+        TODO Use threading to overlap datatransfer with vsnr2d calls to speed up process
+    TODO Speed up using User Managed FFT Plan
+    TODO Speed up using less kernels thanks to User Kernel, currently 45 CUDA kernels     
+-->
 # pyvsnr
 
 ![](https://raw.githubusercontent.com/CEA-MetroCarac/pyvsnr/main/tests/images/fib_sem_corr.png)
@@ -19,7 +30,7 @@ pip install git+https://github.com/CEA-MetroCarac/pyvsnr.git
 ```
 
 In case of problem during CUDA execution (typically OSError or 'access memory error'),
-it may be necessary to **recompile** the shared library from source (see below).
+it may be necessary to **recompile** the shared library from source ([see below](#shared-library-re-compilation)).
 
 ## Requirements
 
@@ -30,15 +41,17 @@ packages for examples and tests running.
 For **GPU** execution, a working CUDA installation is necessary wether you want to use the CUDA version directly or the cupy one. We recommend using the [CuPy](https://cupy.dev) library, which was 10x faster in the tests. Please ensure that you install the correct version of CuPy that corresponds to your CUDA version (for example, if you're using CUDA 12.x, you should install `cupy-cuda12x`). See the [installation instructions](https://docs.cupy.dev/en/stable/install.html) for more details.
 
 - numpy
+- pyfftw
 - cupy (**optional** but strongly recommended, allows for GPU computation)
 - matplotlib, scikit-image (**optional**, for examples and tests execution only)
 
 <!-- The Jupyter notebook requires all the above packages, plus jupyter. It is only used for examples and tests. -->
 
 ## Usage
-<!-- To use `pyvsnr`, you can import the `vsnr2d` function from `vsnr2d.py` or the `vsnr2d_cuda` function from `vsnr2d_cuda.py`. -->
 
-Here is a basic example:
+`pyvsnr` allows you to process either a single image (2D array) or a batch of images (3D array). Here are some basic examples:
+
+### Single Image
 
 ```python
 import numpy as np
@@ -47,18 +60,32 @@ from pyvsnr import vsnr2d
 img = np.random.random((100, 100))  # Input image
 filters = [{'name':'Dirac', 'noise_level':0.35}]  # List of filters
 
-img_corr_py = vsnr2d(img, filters) # Compute VSNR
+img_corr_py = vsnr2d(img, filters) # output is a 2D array (100, 100)
 ```
 
-<!-- explanation of maxit and algo choice -->
+### Batch of Images
+
+```python
+import numpy as np
+from pyvsnr import vsnr2d
+
+imgs = np.random.random((10, 100, 100))  # Batch of 10 images
+filters = [{'name':'Dirac', 'noise_level':0.35}]  # List of filters
+
+imgs_corr_py = vsnr2d(imgs, filters) # Output is a 3D array (10, 100, 100)
+```
 
 By default, the `vsnr2d` function uses auto detection to determine whether to use the CPU or GPU implementation. If CuPy is installed, it will use it, otherwise it will try to use the CUDA implementation. If neither are available, it will fall back to the NumPy CPU implementation.
 
-If you want to choose the algorithm to use, you can do so using the `algo` argument (possible values are `'auto'`, `'numpy'`, `'cupy'` or `'cuda'`; default value is `'auto'`) :
+If you want to choose the algorithm to use, you can do so using the `algo` argument. The possible values are `'auto'`, `'cupy'`, `'cuda'`, and `'numpy'`. The default value is `'auto'`.
+
+Please note that the CUDA implementation doesn't support batch processing, you can still pass 3D arrays but it'll process them one at a time.
 
 ```python
 # Compute VSNR using CUDA
-img_corr_cuda = vsnr2d(img, filters, algo='cuda')
+from pyvsnr import vsnr2d
+img_corr_cuda = vsnr2d(img, filters, algo='cuda') # OK
+imgs_corr_cuda = vsnr2d(imgs, filters, algo='cuda') # Will process images one at a time
 ```
 
 The `cvg_threshold` parameter is a stopping criterion based on the relative-change of the denoised image between successive iterations.
@@ -110,7 +137,6 @@ jupyter notebook tests/notebook.ipynb
 You can also create your own tests using `from pyvsnr.utils import curtains_addition, stripes_addition, add_gaussian_noise`
 
 ## Shared library re-compilation
-
 If you encounter shared library load errors then you may need
 to recompile from source. This requires a working CUDA installation
 with `nvcc` compiler. The source code is distributed with this package

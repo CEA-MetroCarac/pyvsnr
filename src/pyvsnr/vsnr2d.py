@@ -23,30 +23,26 @@ except ImportError:
 def compute_phi(fphi1, fphi2, beta, xp):
     """Compute the value of fphi based on the values of fphi1, fphi2, and beta."""
     # Compute the squares of the real and imaginary parts of fphi1 and fphi2
-    fphi1_squared_real = xp.square(xp.abs(fphi1))
-    fphi2_squared_real = xp.square(xp.abs(fphi2))
+    fphi1 = xp.square(xp.abs(fphi1))
+    fphi2 = xp.square(xp.abs(fphi2))
 
     # Compute the value of fphi
-    fphi = 1 + beta * (fphi1_squared_real + fphi2_squared_real)
+    fphi = 1 + beta * (fphi1 + fphi2)
 
-    # Create a complex CuPy array with the computed values of fphi
-    fphi_complex = xp.zeros_like(fphi, dtype=xp.complex64)
-    fphi_complex.real = fphi
-
-    return fphi_complex
+    return fphi
 
 
 def update_psi(fpsitemp, fsum, alpha, xp):
     """Update the value of fsum based on the values of fpsitemp, fsum, and alpha."""
     # // fsum += |fpsitemp|^2 / alpha_i;
-    fsum = xp.add(fsum, xp.divide(fpsitemp, alpha))
+    fsum += xp.divide(fpsitemp, alpha)
     return fsum
 
 
-def create_dirac(n, val, xp):
+def create_dirac(n0, n1, val, xp):
     """Create a Dirac filter."""
-    psi = xp.zeros((n,), dtype=xp.float32)
-    psi[0] = val
+    psi = xp.zeros((n0, n1), dtype=xp.float32)
+    psi[0, 0] = val
     return psi
 
 
@@ -74,7 +70,7 @@ def create_gabor(n0, n1, level, sigmax, sigmay, angle, phase, lambda_, xp):
     ) * xp.cos((x_theta * lambda_ / sigmax) + phase)
     psi = level * val / nn
 
-    return psi.ravel()
+    return psi
 
 
 def update_y(d1u0, d2u0, tmp1, tmp2, lambda1, lambda2, beta, xp):
@@ -84,48 +80,46 @@ def update_y(d1u0, d2u0, tmp1, tmp2, lambda1, lambda2, beta, xp):
     """
     t1 = d1u0 - (tmp1 + (lambda1 / beta))
     t2 = d2u0 - (tmp2 + (lambda2 / beta))
-    ng = (
-        xp.sqrt(xp.add(xp.square(t1), xp.square(t2))) + xp.finfo(float).eps
-    )  # Adding a small epsilon to avoid division by zero
-    mask = ng > 1.0 / beta
+    ng = xp.hypot(t1, t2) + xp.finfo(xp.float32).eps  # epsilon to avoid division by zero
+    coef = xp.float32(1.0)
+    mask = ng > coef / beta
 
-    coef = 1.0 - (1.0 / (beta * ng))
-    y1 = d1u0 - mask * (t1 * coef)  # cp inf * 0 = 0
-    y2 = d2u0 - mask * (t2 * coef)  # while np inf * 0 = nan
+    coef -=  (coef / (beta * ng))
+    y1 = d1u0 - mask * (t1 * coef)
+    y2 = d2u0 - mask * (t2 * coef)
 
     return y1, y2
 
 
-def setd1(n, n1, xp):
+def setd1(n0, n1, xp):
     """Set the values of d1."""
-    d1 = xp.zeros((n,), dtype=xp.complex64)
-    d1[0] = 1
-    d1[n1 - 1] = -1
+    d1 = xp.zeros((n0, n1), dtype=xp.float32)
+    d1[0, 0] = 1
+    d1[0, n1 - 1] = -1
 
     return d1
 
 
-def setd2(n, n1, xp):
+def setd2(n0, n1, xp):
     """Set the values of d2."""
-    d2 = xp.zeros((n,), dtype=xp.complex64)
-    d2[0] = 1
-    d2[n - n1] = -1
+    d2 = xp.zeros((n0, n1), dtype=xp.float32)
+    d2[0, 0] = 1
+    d2[n0 - 1, 0] = -1
 
     return d2
 
 
 def compute_vsnr(filters, u0, n0, n1, nit, beta, vmax, xp, cvg_threshold):
     """Calculate the corrected image using the 2D-VSNR algorithm"""
-    n = n0 * n1
-    gu = xp.zeros((n,), dtype=xp.float32)
+    gu = xp.zeros_like(u0, dtype=xp.float32)
 
     gu0 = u0.copy()
-    gpsi = xp.zeros((n,), dtype=xp.float32)
+    gpsi = xp.zeros_like(u0, dtype=xp.float32)
 
-    gu0 = xp.divide(gu0, vmax)
+    gu0 = xp.divide(gu0, vmax[:, None, None])
 
     # 2. Prepares filters
-    gpsi = create_filters(filters, gu0, n0, n1, xp)
+    gpsi = create_filters_batch(filters, gu0, n0, n1, xp)
 
     # 3. Denoises the image
     gu, cvg_criteria = vsnr_admm(
@@ -133,11 +127,23 @@ def compute_vsnr(filters, u0, n0, n1, nit, beta, vmax, xp, cvg_threshold):
     )
 
     # 4. Copies the result to u
-    gu = xp.multiply(gu, vmax)
+    gu = xp.multiply(gu, vmax[:, None, None])
     u = xp.copy(gu)
 
     return u, cvg_criteria
 
+def create_filters_batch(filters, gu0, n0, n1, xp):
+    """
+    Create filters based on filters parameters stored in the filters array.
+    The calculated filters are stored in the gpsi array.
+    """
+    batch_size, _, _ = gu0.shape
+    gpsi = xp.zeros((batch_size, n0, n1), dtype=xp.float32)
+
+    for i in range(batch_size):
+        gpsi[i] = create_filters(filters, gu0[i], n0, n1, xp)
+
+    return gpsi
 
 def create_filters(filters, gu0, n0, n1, xp):
     """
@@ -147,144 +153,120 @@ def create_filters(filters, gu0, n0, n1, xp):
     # Computes the l2 norm of u0 on GPU
     fsum = 0
     norm = xp.linalg.norm(gu0)
+    n0n1 = xp.float32(n0 * n1)
 
-    # Computes d1 and fd1
-    n = n0 * n1
-    # d1=xp.array([-3-10j,-2+2j],dtype=xp.complex64) #test
-    d1 = setd1(n, n1, xp)  # // d1[0] = 1; d1[n1-1] = -1;
-    fd1 = xp.fft.fft2(d1.reshape(n0, n1)).flatten()
+    # Computes fd1
+    fd1 = setd1(n0, n1, xp)  # // d1[0] = 1; d1[n1-1] = -1;
+    fd1 = xp.fft.rfft2(fd1)
     fd1 = xp.abs(fd1)  # // fd1 = |fd1|;
 
-    # Computes d2 and fd2
-    # d2=xp.array([5-1j,-4+2j],dtype=xp.complex64) #test
-    d2 = setd2(n, n1, xp)  # // d2[0] = 1; d2[(n0-1)*n1] = -1;
-    fd2 = xp.fft.fft2(d2.reshape(n0, n1)).flatten()
+    # Computes fd2
+    fd2 = setd2(n0, n1, xp)  # // d2[0] = 1; d2[(n0-1)*n1] = -1;
+    fd2 = xp.fft.rfft2(fd2)
     fd2 = xp.abs(fd2)
 
     # Computes PSI = sum_{i=1}^m |PSI_i|^2/alpha_i, where alpha_i is defined in the paper.
 
     for filt in filters:
         if filt["name"] == "Dirac":
-            psitemp = create_dirac(n, 1, xp)
+            psitemp = create_dirac(n0, n1, 1, xp)
             eta = filt["noise_level"]
         elif filt["name"] == "Gabor":
             sigma = filt["sigma"]
             theta = filt["theta"]
-            psitemp = create_gabor(
-                n0, n1, 1, sigma[0], sigma[1], theta, 0, 0, xp
-            )
+            psitemp = create_gabor(n0, n1, 1, sigma[0], sigma[1], theta, 0, 0, xp)
             eta = filt["noise_level"]
 
-        fpsitemp = xp.fft.fft2(psitemp.reshape(n0, n1)).flatten()
+        psitemp = xp.fft.rfft2(psitemp)
 
-        fpsitemp = xp.square(xp.abs(fpsitemp))  # // fpsitemp = |fpsitemp|^2;)
+        psitemp = xp.square(xp.abs(psitemp))  # // psitemp = |psitemp|^2;)
 
-        ftmp = xp.multiply(xp.abs(fd1), xp.abs(fpsitemp))
-        imax = xp.argmax(xp.abs(ftmp))  # find the index of the maximum element
+        ftmp = xp.multiply(xp.abs(fd1), xp.abs(psitemp))
+        imax = xp.unravel_index(xp.argmax(xp.abs(ftmp)), ftmp.shape)  # find the index of the maximum element
         max1 = ftmp[imax]
 
-        ftmp = xp.multiply(xp.abs(fd2), xp.abs(fpsitemp))
-        imax = xp.argmax(xp.abs(ftmp))
+        ftmp = xp.multiply(xp.abs(fd2), xp.abs(psitemp))
+        imax = xp.unravel_index(xp.argmax(xp.abs(ftmp)), ftmp.shape)
         max2 = ftmp[imax]
         nmax = max(max1, max2)
-        alpha = np.sqrt(n) * n**2 * nmax / (norm * eta)
+        alpha = xp.sqrt(n0n1) * (n0n1)**2 * nmax / (norm * eta)
 
-        fsum = update_psi(
-            fpsitemp, fsum, alpha, xp
-        )  # fsum += |fpsitemp|^2 / alpha_i;
+        fsum = update_psi(psitemp, fsum, alpha, xp)  # fsum += |psitemp|^2 / alpha_i;
 
     fsum = xp.sqrt(fsum)  # // fsum = sqrtf(fsum);
-    gpsi = xp.fft.ifft2(fsum.reshape(n0, n1), norm="forward").flatten()
+    gpsi = xp.fft.irfft2(fsum, norm="forward", s=(n0, n1))
 
     return gpsi
 
 
 def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
     """Denoise the image u0 using the VSNR algorithm."""
-    n = n0 * n1
-    # m=n0*(n1//2+1)
+    batch_size = u0.shape[0]
+    n0n1 = xp.float32(n0 * n1)
 
-    lambda1 = xp.zeros((n,), dtype=xp.float32)
-    lambda2 = xp.zeros((n,), dtype=xp.float32)
-    y1 = xp.zeros((n,), dtype=xp.float32)
-    y2 = xp.zeros((n,), dtype=xp.float32)
-    tmp1 = xp.zeros((n,), dtype=xp.float32)
-    tmp2 = xp.zeros((n,), dtype=xp.float32)
+    lambda1 = xp.zeros((batch_size, n0, n1), dtype=xp.float32)
+    lambda2 = xp.zeros((batch_size, n0, n1), dtype=xp.float32)
+    y1 = xp.zeros((batch_size, n0, n1), dtype=xp.float32)
+    y2 = xp.zeros((batch_size, n0, n1), dtype=xp.float32)
 
-    fu0 = xp.fft.fft2(u0.reshape(n0, n1)).flatten()
-    fpsi = xp.fft.fft2(psi.reshape(n0, n1)).flatten()
+    fu0 = xp.fft.rfft2(u0)
+    fpsi = xp.fft.rfft2(psi)
 
-    # // Computes d1 and fd1
-    d1 = setd1(n, n1, xp)  # // d1[0] = 1; d1[n1-1] = -1;
-    fd1 = xp.fft.fft2(d1.reshape(n0, n1)).flatten()
+    # Computes fd1
+    fd1 = setd1(n0, n1, xp)
+    fd1 = xp.fft.rfft2(fd1)
 
-    # // Computes d2 and fd2
-    d2 = setd2(n, n1, xp)  # // d2[0] = 1; d2[(n0-1)*n1] = -1;
-    fd2 = xp.fft.fft2(d2.reshape(n0, n1)).flatten()
+    # Computes fd2
+    fd2 = setd2(n0, n1, xp)
+    fd2 = xp.fft.rfft2(fd2)
 
-    # // Computes d1u0
-    ftmp1 = xp.multiply(fd1, fu0)
-    d1u0 = xp.real(
-        xp.fft.ifft2(ftmp1.reshape(n0, n1), norm="forward").flatten()
-    )
-    d1u0 = xp.divide(d1u0, n)  # d1u0=normalize_array(d1u0)
+    # Computes d1u0
+    ftmp1 = fd1 * fu0
+    d1u0 = xp.fft.irfft2(ftmp1, norm="forward", s=(n0, n1))
+    d1u0 /= n0n1
 
-    # // Computes d2u0
-    ftmp2 = xp.multiply(fd2, fu0)
-    d2u0 = xp.real(
-        xp.fft.ifft2(ftmp2.reshape(n0, n1), norm="forward").flatten()
-    )
-    d2u0 = xp.divide(d2u0, n)
+    # Computes d2u0
+    ftmp2 = fd2 * fu0
+    d2u0 = xp.fft.irfft2(ftmp2, norm="forward", s=(n0, n1))
+    d2u0 /= n0n1
 
-    # // Computes fphi1 and fphi2
-    fphi1 = xp.multiply(fpsi, fd1)
-    fphi2 = xp.multiply(fpsi, fd2)
+    # Computes fphi1 and fphi2
+    fphi1 = fpsi * fd1
+    fphi2 = fpsi * fd2
 
-    # // Computes fphi
+    # Computes fphi
     fphi = compute_phi(fphi1, fphi2, beta, xp)
 
     cvg_criterion = 1000.0
     cvg_criteria = []
     i = 0
-    fx_old = 0
+    fx_old = xp.zeros((batch_size, n0, n1), dtype=xp.float32)
     while i < nit and cvg_criterion > cvg_threshold:
-        #     // -------------------------------------------------------------
-        #     // First step, x update : (I+beta ATA)x = AT (-lambda+beta*ATy)
-        #     // -------------------------------------------------------------
-        tmp1 = xp.subtract(xp.multiply(y1, beta), lambda1)
-        tmp2 = xp.subtract(xp.multiply(y2, beta), lambda2)
-        ftmp1 = xp.fft.fft2(tmp1.reshape(n0, n1)).flatten()
-        ftmp2 = xp.fft.fft2(tmp2.reshape(n0, n1)).flatten()
+        # First step, x update : (I+beta ATA)x = AT (-lambda+beta*ATy)
+        ftmp1 = y1 * beta - lambda1
+        ftmp2 = y2 * beta - lambda2
+        ftmp1 = xp.fft.rfft2(ftmp1)
+        ftmp2 = xp.fft.rfft2(ftmp2)
 
         # Computes w = conj(u) * v
-        ftmp1 = xp.multiply(xp.conj(fphi1), ftmp1)
-        ftmp2 = xp.multiply(xp.conj(fphi2), ftmp2)
+        ftmp1 *= xp.conj(fphi1)
+        ftmp2 *= xp.conj(fphi2)
 
-        # fx = (tmp1 + tmp2) / fphi;
-        fx = xp.divide(xp.add(ftmp1, ftmp2), fphi)
+        fx = (ftmp1 + ftmp2) / fphi
 
-        #     // --------------------------------------------------------
-        #     // Second step y update : y = prox_{f1/beta}(Ax+lambda/beta)
-        #     // --------------------------------------------------------
+        # Second step y update : y = prox_{f1/beta}(Ax+lambda/beta)
+        ftmp1 = fphi1 * fx
+        ftmp2 = fphi2 * fx
+        ftmp1 = xp.fft.irfft2(ftmp1, norm="forward", s=(n0, n1))
+        ftmp2 = xp.fft.irfft2(ftmp2, norm="forward", s=(n0, n1))
+        ftmp1 /= n0n1
+        ftmp2 /= n0n1
 
-        ftmp1 = xp.multiply(fphi1, fx)
-        ftmp2 = xp.multiply(fphi2, fx)
-        tmp1 = (
-            xp.fft.ifft2(ftmp1.reshape(n0, n1), norm="forward").flatten().real
-        )
-        tmp2 = (
-            xp.fft.ifft2(ftmp2.reshape(n0, n1), norm="forward").flatten().real
-        )
-        tmp1 = xp.divide(tmp1, n)  # normalize_array(tmp1)
-        tmp2 = xp.divide(tmp2, n)  # normalize_array(tmp2)
+        y1, y2 = update_y(d1u0, d2u0, ftmp1, ftmp2, lambda1, lambda2, beta, xp)
 
-        y1, y2 = update_y(d1u0, d2u0, tmp1, tmp2, lambda1, lambda2, beta, xp)
-
-        #     // --------------------------
-        #     // Third step lambda update
-        #     // --------------------------
-        lambda1 = lambda1 + xp.multiply(beta, xp.subtract(tmp1, y1))
-        lambda2 = lambda2 + xp.multiply(beta, xp.subtract(tmp2, y2))
+        # Third step lambda update : lambda = lambda + beta * (Ax - y)
+        lambda1 += beta * (ftmp1 - y1)
+        lambda2 += beta * (ftmp2 - y2)
 
         if i != 0:
             cvg_criterion = float(
@@ -294,16 +276,16 @@ def vsnr_admm(u0, psi, n0, n1, nit, beta, xp, cvg_threshold=0):
         fx_old = fx
         i += 1
 
-    # // Last but not the least : u = u0 - (psi * x)
-    ftmp1 = xp.multiply(fx, fpsi)
-    u = xp.fft.ifft2(ftmp1.reshape(n0, n1), norm="forward").flatten().real
-    u = xp.divide(u, n)
-    u = xp.subtract(u0, u)
+    # Last but not the least : u = u0 - (psi * x)
+    ftmp1 = fx * fpsi
+    u = xp.fft.irfft2(ftmp1, norm="forward", s=(n0, n1))
+    u /= n0n1
+    u = u0 - u
 
     return u, cvg_criteria
 
 def vsnr2d_py(
-    img,
+    imgs,
     filters,
     maxit=20,
     xp=np,
@@ -312,51 +294,60 @@ def vsnr2d_py(
     cvg_threshold=0,
     return_cvg=False,
 ):
-    img = xp.asarray(img)
-    n0, n1 = img.shape
-    dtype = img.dtype
+    # If imgs is a 2D array, add an extra dimension to make it a 3D array with one image
+    if len(imgs.shape) == 2:
+        imgs = imgs[xp.newaxis, :, :]
 
-    vmin, vmax = img.min(), img.max()
+    if hasattr(imgs, 'get'):
+        imgs = imgs.get()
+
+    batch_size, n0, n1 = imgs.shape
+    dtype = imgs.dtype
+    beta = xp.float32(beta)
+
+    imgs = xp.asarray(imgs, dtype=xp.float32)
+
+    vmin, vmax = imgs.min(axis=(1,2)), imgs.max(axis=(1,2))
 
     if norm:
-        img = (img - vmin) / (vmax - vmin)
+        imgs = (imgs - vmin[:, None, None]) / (vmax[:, None, None] - vmin[:, None, None])
+        vmax_norm = xp.ones(batch_size, dtype=xp.float32)
+    else:
+        vmax_norm = vmax
 
-    u0 = img.flatten()
-    u = xp.zeros_like(u0)
+    # u0 = imgs.reshape(batch_size, -1)
+    # u = xp.zeros_like(u0)
 
     # calculation
-    u, cvg_criteria = compute_vsnr(filters, u0, n0, n1, maxit, beta, u0.max(), xp, cvg_threshold=cvg_threshold)
-
-    # reshaping
-    img_corr = xp.array(u).reshape(n0, n1)
+    imgs_corr, cvg_criteria = compute_vsnr(filters, imgs, n0, n1, maxit, beta, vmax_norm, xp, cvg_threshold)
 
     if norm:
-        img_corr = xp.clip(img_corr, 0, 1)
-        img_corr = (img_corr - img_corr.min()) / (
-            img_corr.max() - img_corr.min()
+        imgs_corr = xp.clip(imgs_corr, 0, 1)
+        imgs_corr = (imgs_corr - imgs_corr.min(axis=(1,2))[:, None, None]) / (
+            imgs_corr.max(axis=(1,2))[:, None, None] - imgs_corr.min(axis=(1,2))[:, None, None]
         )
-        img_corr = vmin + img_corr * (vmax - vmin)
-    elif np.issubdtype(dtype, np.integer):
+        imgs_corr = vmin[:, None, None] + imgs_corr * (vmax[:, None, None] - vmin[:, None, None])
+    elif xp.issubdtype(dtype, xp.integer):
         # If dtype is integer, clip at its maximum value to avoid overflow
-        img_corr = np.clip(img_corr, 0, np.iinfo(dtype).max)
+        imgs_corr = xp.clip(imgs_corr, 0, xp.iinfo(dtype).max)
 
     # cast to original dtype
-    img_corr = img_corr.astype(dtype)
+    imgs_corr = imgs_corr.astype(dtype)
 
     # Handle cupy to numpy conversion if needed
-    try:
-        if xp == cp:
-            img_corr = img_corr.get()
-    except:
-        pass
+    if hasattr(imgs_corr, 'get'):
+        imgs_corr = imgs_corr.get()
+
+    # Remove the extra dimension from the output if the original input was a 2D array
+    imgs_corr = xp.squeeze(imgs_corr)
 
     if return_cvg:
-        return img_corr, cvg_criteria
+        return imgs_corr, cvg_criteria
 
-    return img_corr
+    return imgs_corr
 
 def vsnr2d(
-    img,
+    imgs,
     filters,
     maxit=20,
     algo='auto',
@@ -364,9 +355,10 @@ def vsnr2d(
     norm=True,
     cvg_threshold=0,
     return_cvg=False,
+    verbose=False,
 ):
     r"""
-    Calculate the corrected image using the 2D-VSNR algorithm in libvsnr2d.dll
+    Calculate the corrected image using the 2D-VSNR algorithm
 
     Notes
     -----
@@ -376,8 +368,8 @@ def vsnr2d(
 
     Parameters
     ----------
-    img: numpy.ndarray((n0, n1))
-        The image to process
+    imgs: numpy.ndarray((batch_size, n0, n1))
+        The images to process
     filters: list of dicts
         Dictionaries that contains filters definition.
         Example For a 'Dirac' filter:
@@ -404,11 +396,13 @@ def vsnr2d(
         image is renormalized to the original range
     return_cvg: bool, optional
         If True, the function returns the convergence criterion for each iteration
+    verbose: bool, optional
+        If True, print the used algorithm
 
     Returns
     -------
-    img_corr: numpy.ndarray((n0, n1))
-        The corrected image
+    imgs_corr: numpy.ndarray((batch_size, n0, n1))
+        The corrected images
     """
 
     if algo == 'auto':
@@ -419,15 +413,47 @@ def vsnr2d(
         else:
             algo = 'numpy'
 
-    
+    if verbose:
+        print(f"Using {algo} algorithm")
+
     if algo == 'cupy':
-        return vsnr2d_py(img, filters, maxit=maxit, xp=cp, beta=beta, norm=norm, cvg_threshold=cvg_threshold, return_cvg=return_cvg)
+        return vsnr2d_py(
+            imgs,
+            filters,
+            maxit=maxit,
+            xp=cp,
+            beta=beta,
+            norm=norm,
+            cvg_threshold=cvg_threshold,
+            return_cvg=return_cvg,
+        )
 
     elif algo == 'cuda':
-        return vsnr2d_cuda(img, filters, nite=maxit, beta=beta, nblocks='auto', norm=norm)
-    
+        return vsnr2d_cuda(
+            imgs,
+            filters,
+            nite=maxit,
+            beta=beta,
+            nblocks="auto",
+            norm=norm,
+        )
+
     elif algo == 'numpy':
-        return vsnr2d_py(img, filters, maxit=maxit, xp=np, beta=beta, norm=norm, cvg_threshold=cvg_threshold, return_cvg=return_cvg)
-    
+        # Enable pyfftw to replace numpy.fft
+        import pyfftw
+        pyfftw.interfaces.cache.enable()
+        np.fft = pyfftw.interfaces.numpy_fft
+        
+        return vsnr2d_py(
+            imgs,
+            filters,
+            maxit=maxit,
+            xp=np,
+            beta=beta,
+            norm=norm,
+            cvg_threshold=cvg_threshold,
+            return_cvg=return_cvg,
+        )
+
     else:
-        raise ValueError("algo must be 'cupy', 'cuda', or 'numpy'")
+        raise ValueError("algo must be 'cupy', 'numpy', or 'cuda'.")
