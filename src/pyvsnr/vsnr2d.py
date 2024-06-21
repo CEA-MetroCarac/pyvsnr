@@ -296,14 +296,15 @@ def vsnr2d_py(
 ):
     # If imgs is a 2D array, add an extra dimension to make it a 3D array with one image
     if len(imgs.shape) == 2:
-        imgs = imgs[np.newaxis, :, :]
+        imgs = imgs[xp.newaxis, :, :]
 
     if hasattr(imgs, 'get'):
         imgs = imgs.get()
-    imgs = xp.asarray(imgs)
 
     batch_size, n0, n1 = imgs.shape
     dtype = imgs.dtype
+
+    imgs = xp.asarray(imgs, dtype=xp.float32)
 
     vmin, vmax = imgs.min(axis=(1,2)), imgs.max(axis=(1,2))
 
