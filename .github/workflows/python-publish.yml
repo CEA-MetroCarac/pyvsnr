@@ -45,6 +45,6 @@ jobs:
     - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@v1.9.0
       with:
-        repository_url: ${{ env.REPOSITORY_URL }}
+        repository-url: ${{ env.REPOSITORY_URL }}
         user: __token__
         password: ${{ env.PYPI_API_TOKEN }}
