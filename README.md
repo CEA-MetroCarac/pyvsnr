@@ -4,9 +4,8 @@ TODO Pyvsnr 2.2.0:
         TODO int to float32 still needed for CuPy ?
     TODO optionally take file path as input, load and process concurrently ?
         TODO Load Directly onto GPU for CuPy using nvimagecodec. https://github.com/NVIDIA/nvImageCodec/issues/5 fixed ?
-        TODO auto set batch size based on user input MAX_GPU_MEM and image size
+        TODO auto set batch size based on user input MAX_GPU_MEM and image size (https://docs.cupy.dev/en/stable/user_guide/memory.html#limiting-gpu-memory-usage)
         TODO Use threading to overlap datatransfer with vsnr2d calls to speed up process
-    TODO Speed up using User Managed FFT Plan
     TODO Speed up using less kernels thanks to User Kernel, currently 45 CUDA kernels     
 -->
 # pyvsnr
