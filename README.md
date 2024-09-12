@@ -18,14 +18,15 @@ TODO Pyvsnr 2.2.0:
 
 ## Installation
 
+### From PyPI (recommended)
+
 ```bash
 pip install pyvsnr
 ```
-
-or for the latest version:
+### From GitHub (latest version)
 
 ```bash
-pip install git+https://github.com/CEA-MetroCarac/pyvsnr.git
+pip install git+https://github.com/CEA-MetroCarac/pyvsnr
 ```
 
 In case of problem during CUDA execution (typically OSError or 'access memory error'),
