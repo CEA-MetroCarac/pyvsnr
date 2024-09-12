@@ -20,6 +20,9 @@ python = ">=3.9"
 numpy = "*"
 pyfftw = "*"
 
+[tool.poetry.dev-dependencies]
+pytest = "*"
+
 [[tool.poetry.source]]
 name = "pyvsnr"
 url = "https://github.com/CEA-MetroCarac/pyvsnr"
