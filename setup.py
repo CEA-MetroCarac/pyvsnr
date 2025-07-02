@@ -127,15 +127,13 @@ def install_cupy_if_needed():
 
     print(f"📦 Installing {cupy_package} for CUDA {cuda_version}...")
     try:
+        env = os.environ.copy()
+        env['PYTHONPATH'] = ''
         subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "pip",
-                "install",
-                cupy_package,
-            ],
+            [sys.executable, "-m", "pip", "install", cupy_package],
             check=True,
+            env=env,
+            cwd=os.path.expanduser("~")
         )
         print(f"✅ Successfully installed {cupy_package}")
         print("   GPU acceleration is now available!")
@@ -146,7 +144,7 @@ def install_cupy_if_needed():
 
 def _run_cupy_install():
     try:
-        print("🚀 Starting CuPy automatic installation...")
+        print("🚀 PyVSNR CuPy Auto-Installer")
         install_cupy_if_needed()
     except ImportError as e:
         print(f"ℹ️ CuPy auto-installation encountered an issue: {e}")
