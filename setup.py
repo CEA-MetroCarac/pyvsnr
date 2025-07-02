@@ -1,12 +1,8 @@
-"""
-Auto-detection and installation of CuPy for pyvsnr
-"""
-
-import os
-import sys
-import subprocess
-import re
-
+import os, sys, re, subprocess
+from setuptools import setup, find_packages
+from setuptools.command.develop import develop
+from setuptools.command.install import install
+from setuptools.command.bdist_wheel import bdist_wheel
 
 def get_cuda_version():
     """Detect CUDA version from various sources"""
@@ -15,14 +11,13 @@ def get_cuda_version():
     # nvcc
     try:
         result = subprocess.run(
-            ["nvcc", "--version"], capture_output=True, text=True, timeout=10
+            ["nvcc", "--version"], capture_output=True, text=True, timeout=10, check=True
         )
-        if result.returncode == 0:
-            match = re.search(r"release (\d+\.\d+)", result.stdout)
-            if match:
-                cuda_version = match.group(1)
-                print(f"✅ Detected CUDA version from nvcc: {cuda_version}")
-                return cuda_version
+        match = re.search(r"release (\d+\.\d+)", result.stdout)
+        if match:
+            cuda_version = match.group(1)
+            print(f"✅ Detected CUDA version from nvcc: {cuda_version}")
+            return cuda_version
     except (
         subprocess.TimeoutExpired,
         FileNotFoundError,
@@ -33,16 +28,15 @@ def get_cuda_version():
     # nvidia-smi
     try:
         result = subprocess.run(
-            ["nvidia-smi"], capture_output=True, text=True, timeout=10
+            ["nvidia-smi"], capture_output=True, text=True, timeout=10, check=True
         )
-        if result.returncode == 0:
-            match = re.search(r"CUDA Version: (\d+\.\d+)", result.stdout)
-            if match:
-                cuda_version = match.group(1)
-                print(
-                    f"✅ Detected CUDA version from nvidia-smi: {cuda_version}"
-                )
-                return cuda_version
+        match = re.search(r"CUDA Version: (\d+\.\d+)", result.stdout)
+        if match:
+            cuda_version = match.group(1)
+            print(
+                f"✅ Detected CUDA version from nvidia-smi: {cuda_version}"
+            )
+            return cuda_version
     except (
         subprocess.TimeoutExpired,
         FileNotFoundError,
@@ -57,18 +51,18 @@ def get_cuda_version():
             if os.path.exists(nvcc_path):
                 result = subprocess.run(
                     [nvcc_path, "--version"],
+                    check=True,
                     capture_output=True,
                     text=True,
                     timeout=10,
                 )
-                if result.returncode == 0:
-                    match = re.search(r"release (\d+\.\d+)", result.stdout)
-                    if match:
-                        cuda_version = match.group(1)
-                        print(
-                            f"✅ Detected CUDA version from CUDA_HOME: {cuda_version}"
-                        )
-                        return cuda_version
+                match = re.search(r"release (\d+\.\d+)", result.stdout)
+                if match:
+                    cuda_version = match.group(1)
+                    print(
+                        f"✅ Detected CUDA version from CUDA_HOME: {cuda_version}"
+                    )
+                    return cuda_version
         except (subprocess.TimeoutExpired, subprocess.SubprocessError):
             pass
 
@@ -97,8 +91,9 @@ def get_cupy_package_name(cuda_version):
 def is_package_installed(package_name):
     """Check if a package is already installed"""
     try:
-        subprocess.check_call(
+        subprocess.run(
             [sys.executable, "-m", "pip", "show", package_name],
+            check=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -109,22 +104,12 @@ def is_package_installed(package_name):
 
 def install_cupy_if_needed():
     """Try to install appropriate CuPy version if CUDA is detected"""
-
-    if os.environ.get("PYVSNR_SKIP_CUPY_INSTALL", "").lower() in (
-        "1",
-        "true",
-        "yes",
-    ):
-        print("⏭ Skipping CuPy installation (PYVSNR_SKIP_CUPY_INSTALL is set)")
+    try:
+        __import__("cupy")
+        print("✅ CuPy is already installed, skipping automatic installation.")
         return
-
-    cupy_variants = ["cupy", "cupy-cuda11x", "cupy-cuda12x"]
-    for variant in cupy_variants:
-        if is_package_installed(variant):
-            print(
-                f"✅ {variant} is already installed, skipping automatic installation"
-            )
-            return
+    except ImportError:
+        pass
 
     print("🔍 Checking for CUDA installation...")
     cuda_version = get_cuda_version()
@@ -142,15 +127,15 @@ def install_cupy_if_needed():
 
     print(f"📦 Installing {cupy_package} for CUDA {cuda_version}...")
     try:
-        subprocess.check_call(
+        subprocess.run(
             [
                 sys.executable,
                 "-m",
                 "pip",
                 "install",
                 cupy_package,
-                "--no-warn-script-location",
-            ]
+            ],
+            check=True,
         )
         print(f"✅ Successfully installed {cupy_package}")
         print("   GPU acceleration is now available!")
@@ -159,5 +144,40 @@ def install_cupy_if_needed():
         print("   You may need to install CuPy manually for GPU acceleration")
 
 
-if __name__ == "__main__":
-    install_cupy_if_needed()
+def _run_cupy_install():
+    try:
+        print("🚀 Starting CuPy automatic installation...")
+        install_cupy_if_needed()
+    except ImportError as e:
+        print(f"ℹ️ CuPy auto-installation encountered an issue: {e}")
+        print("  You can manually install CuPy for GPU acceleration")
+        print("  To try the automatic installation again, run: python -m pyvsnr.install_cupy")
+
+class PostDevelopCommand(develop):
+    """Post-installation for development mode."""
+    def run(self):
+        develop.run(self)
+        _run_cupy_install()
+
+
+class PostInstallCommand(install):
+    """Post-installation for installation mode."""
+    def run(self):
+        install.run(self)
+        _run_cupy_install()
+
+class PostWheelCommand(bdist_wheel):
+    """Post-installation for wheel builds."""
+    def run(self):
+        bdist_wheel.run(self)
+        _run_cupy_install()
+
+setup(
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
+    cmdclass={
+        'develop': PostDevelopCommand,
+        'install': PostInstallCommand,
+    },
+
+)
