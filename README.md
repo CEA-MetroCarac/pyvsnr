@@ -1,12 +1,10 @@
 <!--
-TODO Pyvsnr 2.2.0:
-    TODO NumPy 2.0.0 support when CuPy (v14 will) and pyfftw support it
-        TODO int to float32 still needed for CuPy ?
-    TODO optionally take file path as input, load and process concurrently ?
-        TODO Load Directly onto GPU for CuPy using nvimagecodec. https://github.com/NVIDIA/nvImageCodec/issues/5 fixed ?
-        TODO auto set batch size based on user input MAX_GPU_MEM and image size (https://docs.cupy.dev/en/stable/user_guide/memory.html#limiting-gpu-memory-usage)
-        TODO Use threading to overlap datatransfer with vsnr2d calls to speed up process
-    TODO Speed up using less kernels thanks to User Kernel, currently 45 CUDA kernels     
+TODO Ideas to make loading and processing more efficient:
+- optionally take file path as input, load and process concurrently ?
+- Load Directly onto GPU for CuPy using nvimagecodec. https://github.com/NVIDIA/nvImageCodec/issues/5 fixed ?
+- auto set batch size based on user input MAX_GPU_MEM and image size (https://docs.cupy.dev/en/stable/user_guide/memory.html#limiting-gpu-memory-usage)
+- Use threading to overlap datatransfer with vsnr2d calls to speed up process
+- Speed up using less kernels thanks to User Kernel, currently 45 CUDA kernels     
 -->
 # pyvsnr
 
@@ -28,6 +26,8 @@ pip install pyvsnr
 ```bash
 pip install git+https://github.com/CEA-MetroCarac/pyvsnr
 ```
+
+> **Note:** The first time you `import pyvsnr`, it will automatically check for a CUDA installation and attempt to install the appropriate version of [CuPy](https://cupy.dev/) for you. This is done to simplify GPU-accelerated setup.
 
 In case of problem during CUDA execution (typically OSError or 'access memory error'),
 it may be necessary to **recompile** the shared library from source ([see below](#shared-library-re-compilation)).
