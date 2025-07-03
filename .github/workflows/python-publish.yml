@@ -26,7 +26,7 @@ jobs:
 
     - name: Build package
       run: |
-        python -m build
+        python -m build --sdist
 
     - name: Check package with Twine
       run: |
@@ -43,7 +43,7 @@ jobs:
         fi
 
     - name: Publish package distributions to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.9.0
+      uses: pypa/gh-action-pypi-publish@release/v1
       with:
         repository-url: ${{ env.REPOSITORY_URL }}
         user: __token__

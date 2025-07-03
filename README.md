@@ -37,7 +37,7 @@ For **CPU** execution, the vsnr algorithm requires only the
 packages for examples and tests running.
 
 For **GPU** execution, a working CUDA installation is necessary wether you want to use the CUDA version directly or the cupy one. We recommend using the [CuPy](https://cupy.dev) library, which was 10x faster in the tests.
-> **Note:** Since pyvsnr 2.3.1, CuPy is installed automatically based on the CUDA version detected on your system.
+> **Note:** Since pyvsnr 2.3.0, CuPy is installed automatically based on the CUDA version detected on your system.
 
 - numpy
 - pyfftw
