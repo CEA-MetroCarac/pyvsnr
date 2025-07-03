@@ -7,9 +7,9 @@ name = "pyvsnr"
 version = "2.3.1"
 description = "VSNR (Variational Stationary Noise Remover) algorithm in python"
 readme = "README.md"
+license = "AGPL-3.0-only"
 requires-python = ">=3.9"
 classifiers = [
-    "License :: OSI Approved :: GNU Affero General Public License v3",
     "Operating System :: OS Independent",
 ]
 dependencies = [
@@ -26,3 +26,9 @@ dev = [
 
 [project.urls]
 repository = "https://github.com/CEA-MetroCarac/pyvsnr"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"pyvsnr" = ["vsnr2d.cu", "precompiled/*"]

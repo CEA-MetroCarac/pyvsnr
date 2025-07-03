@@ -175,11 +175,6 @@ class PostInstallCommand(install):
         install.run(self)
         _run_cupy_install()
 
-class PostWheelCommand(bdist_wheel):
-    """Post-installation for wheel builds."""
-    def run(self):
-        bdist_wheel.run(self)
-        _run_cupy_install()
 
 setup(
     packages=find_packages(where="src"),
