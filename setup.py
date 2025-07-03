@@ -4,6 +4,16 @@ from setuptools.command.develop import develop
 from setuptools.command.install import install
 from setuptools.command.bdist_wheel import bdist_wheel
 
+
+def tprint(msg):
+    try:
+        with open('/dev/tty', 'w') as tty:
+            tty.write(msg + '\n')
+            tty.flush()
+    except:
+        print(msg, file=sys.stderr, flush=True)
+
+
 def get_cuda_version():
     """Detect CUDA version from various sources"""
     cuda_version = None
@@ -16,7 +26,7 @@ def get_cuda_version():
         match = re.search(r"release (\d+\.\d+)", result.stdout)
         if match:
             cuda_version = match.group(1)
-            print(f"✅ Detected CUDA version from nvcc: {cuda_version}")
+            tprint(f"✅ Detected CUDA version from nvcc: {cuda_version}")
             return cuda_version
     except (
         subprocess.TimeoutExpired,
@@ -33,7 +43,7 @@ def get_cuda_version():
         match = re.search(r"CUDA Version: (\d+\.\d+)", result.stdout)
         if match:
             cuda_version = match.group(1)
-            print(
+            tprint(
                 f"✅ Detected CUDA version from nvidia-smi: {cuda_version}"
             )
             return cuda_version
@@ -44,6 +54,7 @@ def get_cuda_version():
     ):
         pass
 
+    # Environment variables
     cuda_home = os.environ.get("CUDA_HOME") or os.environ.get("CUDA_PATH")
     if cuda_home:
         try:
@@ -59,7 +70,7 @@ def get_cuda_version():
                 match = re.search(r"release (\d+\.\d+)", result.stdout)
                 if match:
                     cuda_version = match.group(1)
-                    print(
+                    tprint(
                         f"✅ Detected CUDA version from CUDA_HOME: {cuda_version}"
                     )
                     return cuda_version
@@ -80,11 +91,11 @@ def get_cupy_package_name(cuda_version):
         if major >= 11:
             return f"cupy-cuda{major}x"
         else:
-            print(f"ℹ️ CUDA version {cuda_version} is too old for CuPy support")
+            tprint(f"ℹ️ CUDA version {cuda_version} is too old for CuPy support")
             return None
 
     except (ValueError, IndexError):
-        print(f"ℹ️ Could not parse CUDA version: {cuda_version}")
+        tprint(f"ℹ️ Could not parse CUDA version: {cuda_version}")
         return None
 
 
@@ -106,26 +117,26 @@ def install_cupy_if_needed():
     """Try to install appropriate CuPy version if CUDA is detected"""
     try:
         __import__("cupy")
-        print("✅ CuPy is already installed, skipping automatic installation.")
+        tprint("✅ CuPy is already installed, skipping automatic installation.")
         return
     except ImportError:
         pass
 
-    print("🔍 Checking for CUDA installation...")
+    tprint("🔍 Checking for CUDA installation...")
     cuda_version = get_cuda_version()
 
     if not cuda_version:
-        print("ℹ️ Could not detect CUDA installation.")
-        print("  For GPU acceleration, please install CuPy manually:")
-        print("    pip install cupy-cuda11x  # for CUDA 11.x")
-        print("    pip install cupy-cuda12x  # for CUDA 12.x")
+        tprint("ℹ️ Could not detect CUDA installation.")
+        tprint("  For GPU acceleration, please install CuPy manually:")
+        tprint("    pip install cupy-cuda11x  # for CUDA 11.x")
+        tprint("    pip install cupy-cuda12x  # for CUDA 12.x")
         return
 
     cupy_package = get_cupy_package_name(cuda_version)
     if not cupy_package:
         return
 
-    print(f"📦 Installing {cupy_package} for CUDA {cuda_version}...")
+    tprint(f"📦 Installing {cupy_package} for CUDA {cuda_version}...")
     try:
         env = os.environ.copy()
         env['PYTHONPATH'] = ''
@@ -135,21 +146,21 @@ def install_cupy_if_needed():
             env=env,
             cwd=os.path.expanduser("~")
         )
-        print(f"✅ Successfully installed {cupy_package}")
-        print("   GPU acceleration is now available!")
+        tprint(f"✅ Successfully installed {cupy_package}")
+        tprint("   GPU acceleration is now available!")
     except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to install {cupy_package}: {e}")
-        print("   You may need to install CuPy manually for GPU acceleration")
+        tprint(f"❌ Failed to install {cupy_package}: {e}")
+        tprint("   You may need to install CuPy manually for GPU acceleration")
 
 
 def _run_cupy_install():
     try:
-        print("🚀 PyVSNR CuPy Auto-Installer")
+        tprint("🚀 PyVSNR CuPy Auto-Installer")
         install_cupy_if_needed()
     except ImportError as e:
-        print(f"ℹ️ CuPy auto-installation encountered an issue: {e}")
-        print("  You can manually install CuPy for GPU acceleration")
-        print("  To try the automatic installation again, run: python -m pyvsnr.install_cupy")
+        tprint(f"ℹ️ CuPy auto-installation encountered an issue: {e}")
+        tprint("  You can manually install CuPy for GPU acceleration")
+        tprint("  To try the automatic installation again, run: python -m pyvsnr.install_cupy")
 
 class PostDevelopCommand(develop):
     """Post-installation for development mode."""
