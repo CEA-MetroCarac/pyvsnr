@@ -27,8 +27,6 @@ pip install pyvsnr
 pip install git+https://github.com/CEA-MetroCarac/pyvsnr
 ```
 
-> **Note:** The first time you `import pyvsnr`, it will automatically check for a CUDA installation and attempt to install the appropriate version of [CuPy](https://cupy.dev/) for you. This is done to simplify GPU-accelerated setup.
-
 In case of problem during CUDA execution (typically OSError or 'access memory error'),
 it may be necessary to **recompile** the shared library from source ([see below](#shared-library-re-compilation)).
 
@@ -38,7 +36,8 @@ For **CPU** execution, the vsnr algorithm requires only the
 [NumPy](https://numpy.org/) package, with **matplotlib** and **scikit-image**
 packages for examples and tests running.
 
-For **GPU** execution, a working CUDA installation is necessary wether you want to use the CUDA version directly or the cupy one. We recommend using the [CuPy](https://cupy.dev) library, which was 10x faster in the tests. Please ensure that you install the correct version of CuPy that corresponds to your CUDA version (for example, if you're using CUDA 12.x, you should install `cupy-cuda12x`). See the [installation instructions](https://docs.cupy.dev/en/stable/install.html) for more details.
+For **GPU** execution, a working CUDA installation is necessary wether you want to use the CUDA version directly or the cupy one. We recommend using the [CuPy](https://cupy.dev) library, which was 10x faster in the tests.
+> **Note:** Since pyvsnr 2.3.1, CuPy is installed automatically based on the CUDA version detected on your system.
 
 - numpy
 - pyfftw
