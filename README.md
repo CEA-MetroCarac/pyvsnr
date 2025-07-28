@@ -19,6 +19,13 @@ pip install pyvsnr
 pip install git+https://github.com/CEA-MetroCarac/pyvsnr
 ```
 
+> **If you want to use GPU acceleration (CuPy), you should install the correct version of CuPy for your system**
+> You can use the provided script to install the right version of CuPy:
+>
+> ```bash
+> python -m pyvsnr.install_cupy
+> ```
+
 In case of problem during CUDA execution (typically OSError or 'access memory error'),
 it may be necessary to **recompile** the shared library from source ([see below](#shared-library-re-compilation)).
 
@@ -28,11 +35,11 @@ For **CPU** execution, the vsnr algorithm requires only the
 [NumPy](https://numpy.org/) package, with **matplotlib** and **scikit-image**
 packages for examples and tests running.
 
-For **GPU** execution, a working CUDA installation is necessary wether you want to use the CUDA version directly or the cupy one. We recommend using the [CuPy](https://cupy.dev) library, which was 10x faster in the tests. Please ensure that you install the correct version of CuPy that corresponds to your CUDA version (for example, if you're using CUDA 12.x, you should install `cupy-cuda12x`). See the [installation instructions](https://docs.cupy.dev/en/stable/install.html) for more details.
+For **GPU** execution, you need either [CuPy](https://cupy.dev) (supports CUDA and ROCm), or a working CUDA (NVIDIA) installation.
 
 - numpy
 - pyfftw
-- cupy (**optional** but strongly recommended, allows for GPU computation)
+- cupy (**optional** but strongly recommended, allows for GPU computation on both NVIDIA (CUDA) and AMD (ROCm) GPUs)
 - matplotlib, scikit-image (**optional**, for examples and tests execution only)
 
 <!-- The Jupyter notebook requires all the above packages, plus jupyter. It is only used for examples and tests. -->
@@ -161,13 +168,3 @@ In case you use the results of this code in your article, please don't forget to
 - Fehrenbach, Jérôme, Pierre Weiss, and Corinne Lorenzo. "*Variational algorithms to remove stationary noise: applications to microscopy imaging.*" IEEE Transactions on Image Processing 21.10 (2012): 4420-4430.
 - Fehrenbach, Jérôme, and Pierre Weiss. "*Processing stationary noise: model and parameter selection in variational methods.*" SIAM Journal on Imaging Sciences 7.2 (2014): 613-640.
 - Escande, Paul, Pierre Weiss, and Wenxing Zhang. "*A variational model for multiplicative structured noise removal.*" Journal of Mathematical Imaging and Vision 57.1 (2017): 43-55.
-
-<!-- The main source code is located in the `src` directory:
-
-- `vsnr2d.py`: Contains the main `vsnr2d` function for computing VSNR using numpy or cupy.
-- `vsnr2d_cuda.py`: Contains the CUDA implementation of VSNR, including the `vsnr2d_cuda` function.
-<br>
-The `tests` directory contains unit tests and performance tests:
-
-- `test_cuda_equals_py.py`: Tests to ensure the CUDA and Python implementations produce the same results.
-- `notebok.ipynb`: Jupyter notebook for examples & performance testing. -->
