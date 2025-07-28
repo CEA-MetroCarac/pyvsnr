@@ -1,11 +1,3 @@
-<!--
-TODO Ideas to make loading and processing more efficient:
-- optionally take file path as input, load and process concurrently ?
-- Load Directly onto GPU for CuPy using nvimagecodec. https://github.com/NVIDIA/nvImageCodec/issues/5 fixed ?
-- auto set batch size based on user input MAX_GPU_MEM and image size (https://docs.cupy.dev/en/stable/user_guide/memory.html#limiting-gpu-memory-usage)
-- Use threading to overlap datatransfer with vsnr2d calls to speed up process
-- Speed up using less kernels thanks to User Kernel, currently 45 CUDA kernels     
--->
 # pyvsnr
 
 ![](https://raw.githubusercontent.com/CEA-MetroCarac/pyvsnr/main/tests/images/fib_sem_corr.png)
@@ -36,8 +28,7 @@ For **CPU** execution, the vsnr algorithm requires only the
 [NumPy](https://numpy.org/) package, with **matplotlib** and **scikit-image**
 packages for examples and tests running.
 
-For **GPU** execution, a working CUDA installation is necessary wether you want to use the CUDA version directly or the cupy one. We recommend using the [CuPy](https://cupy.dev) library, which was 10x faster in the tests.
-> **Note:** Since pyvsnr 2.3.0, CuPy is installed automatically based on the CUDA version detected on your system.
+For **GPU** execution, a working CUDA installation is necessary wether you want to use the CUDA version directly or the cupy one. We recommend using the [CuPy](https://cupy.dev) library, which was 10x faster in the tests. Please ensure that you install the correct version of CuPy that corresponds to your CUDA version (for example, if you're using CUDA 12.x, you should install `cupy-cuda12x`). See the [installation instructions](https://docs.cupy.dev/en/stable/install.html) for more details.
 
 - numpy
 - pyfftw

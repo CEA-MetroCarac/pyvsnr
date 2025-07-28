@@ -35,5 +35,3 @@ coverage.xml
 # Data
 *.tif*
 *.nsys-rep
-
-.cupy_checked

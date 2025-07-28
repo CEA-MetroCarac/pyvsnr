@@ -26,7 +26,7 @@ jobs:
 
     - name: Build package
       run: |
-        python -m build --sdist
+        python -m build
 
     - name: Check package with Twine
       run: |
