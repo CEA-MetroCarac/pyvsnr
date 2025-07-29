@@ -19,15 +19,16 @@ pip install pyvsnr
 pip install git+https://github.com/CEA-MetroCarac/pyvsnr
 ```
 
-> **If you want to use GPU acceleration (CuPy), you should install the correct version of CuPy for your system**
-> You can use the provided script to install the right version of CuPy:
->
-> ```bash
-> python -m pyvsnr.install_cupy
-> ```
+### GPU Acceleration
 
-In case of problem during CUDA execution (typically OSError or 'access memory error'),
-it may be necessary to **recompile** the shared library from source ([see below](#shared-library-re-compilation)).
+For much faster processing, use GPU acceleration with CuPy or CUDA. CuPy is strongly recommended—it was faster than CUDA alone in tests.
+
+Install CuPy with:
+```bash
+python -m pyvsnr.install_cupy
+```
+
+> **Note:** If you encounter problems during CUDA execution (typically OSError or 'access memory error'), it may be necessary to **recompile** the shared library from source ([see below](#shared-library-re-compilation)).
 
 ## Requirements
 
