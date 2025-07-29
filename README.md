@@ -19,9 +19,9 @@ pip install pyvsnr
 pip install git+https://github.com/CEA-MetroCarac/pyvsnr
 ```
 
-### GPU Acceleration
+## GPU Acceleration
 
-For much faster processing, use GPU acceleration with CuPy or CUDA. CuPy is strongly recommended—it was faster than CUDA alone in tests.
+For much faster processing, use GPU acceleration with CuPy or CUDA. CuPy is strongly recommended, it was faster than CUDA alone in tests.
 
 Install CuPy with:
 ```bash
