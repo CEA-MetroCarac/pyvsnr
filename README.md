@@ -23,9 +23,19 @@ pip install git+https://github.com/CEA-MetroCarac/pyvsnr
 
 For much faster processing, use GPU acceleration with CuPy or CUDA. CuPy is strongly recommended, it was faster than CUDA alone in tests.
 
-Install CuPy with:
+The easiest way to install the right CuPy build is [`gpu_installer`](https://gitlab.com/yoanncure/gpu_installer): it auto-detects your GPU and CUDA/ROCm version, installs the matching wheel into your active environment, and skips CuPy if a working build is already present.
+
+**Recommended** — zero-install with [`uv`](https://docs.astral.sh/uv/getting-started/installation/) (one line to [install uv](https://docs.astral.sh/uv/getting-started/installation/)):
+
 ```bash
-python -m pyvsnr.install_cupy
+uvx --from git+https://gitlab.com/yoanncure/gpu_installer gpu-installer cupy
+```
+
+Without `uv`:
+
+```bash
+pip install git+https://gitlab.com/yoanncure/gpu_installer
+gpu-installer cupy
 ```
 
 > **Note:** If you encounter problems during CUDA execution (typically OSError or 'access memory error'), it may be necessary to **recompile** the shared library from source ([see below](#shared-library-re-compilation)).
