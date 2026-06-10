@@ -28,13 +28,13 @@ The easiest way to install the right CuPy build is [`gpu_installer`](https://git
 **Recommended** — zero-install with [`uv`](https://docs.astral.sh/uv/getting-started/installation/) (one line to [install uv](https://docs.astral.sh/uv/getting-started/installation/)):
 
 ```bash
-uvx --from git+https://gitlab.com/yoanncure/gpu_installer gpu-installer cupy
+uvx gpu-installer cupy
 ```
 
 Without `uv`:
 
 ```bash
-pip install git+https://gitlab.com/yoanncure/gpu_installer
+pip install gpu_installer
 gpu-installer cupy
 ```
 
