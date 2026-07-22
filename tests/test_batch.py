@@ -48,3 +48,28 @@ def test_vsnr2d_batch_random_imgs():
 
     for i in range(10):
         xp.testing.assert_allclose(gu0_individually[i], gu0_batch[i], atol=1e-2) # 100.01 vs 100.00
+
+def test_vsnr2d_copy_to_host():
+    """ Test the 'copy_to_host' kwarg on the cupy path.
+
+    A cupy input should stay on the device (no host round-trip) and the output
+    location must be controlled by 'copy_to_host':
+      - True  (default) -> numpy array on the host
+      - False           -> cupy array left on the device
+    Both must yield the same values.
+    """
+    img = data.camera().astype(np.float32)
+    img = cp.asarray(img)
+
+    filters = [{"name": "Dirac", "noise_level": 10}]
+
+    out_host = vsnr2d(img, filters, algo="cupy")  # copy_to_host=True by default
+    out_gpu = vsnr2d(img, filters, algo="cupy", copy_to_host=False)
+
+    # the default keeps the historical behaviour: a numpy array is returned
+    assert isinstance(out_host, np.ndarray) and not isinstance(out_host, cp.ndarray)
+    # copy_to_host=False leaves the result on the GPU
+    assert isinstance(out_gpu, cp.ndarray)
+
+    # both paths compute the same corrected image
+    np.testing.assert_allclose(out_host, cp.asnumpy(out_gpu), atol=1e-2)
