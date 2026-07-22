@@ -293,13 +293,11 @@ def vsnr2d_py(
     norm=True,
     cvg_threshold=0,
     return_cvg=False,
+    copy_to_host=True,
 ):
     # If imgs is a 2D array, add an extra dimension to make it a 3D array with one image
     if len(imgs.shape) == 2:
         imgs = imgs[xp.newaxis, :, :]
-
-    if hasattr(imgs, 'get'):
-        imgs = imgs.get()
 
     batch_size, n0, n1 = imgs.shape
     dtype = imgs.dtype
@@ -335,7 +333,7 @@ def vsnr2d_py(
     imgs_corr = imgs_corr.astype(dtype)
 
     # Handle cupy to numpy conversion if needed
-    if hasattr(imgs_corr, 'get'):
+    if copy_to_host and hasattr(imgs_corr, 'get'):
         imgs_corr = imgs_corr.get()
 
     # Remove the extra dimension from the output if the original input was a 2D array
@@ -356,6 +354,7 @@ def vsnr2d(
     cvg_threshold=0,
     return_cvg=False,
     verbose=False,
+    copy_to_host=True,
 ):
     r"""
     Calculate the corrected image using the 2D-VSNR algorithm
@@ -398,6 +397,8 @@ def vsnr2d(
         If True, the function returns the convergence criterion for each iteration
     verbose: bool, optional
         If True, print the used algorithm
+    copy_to_host: bool, optional
+        If using cupy, whether to return a numpy array instead of a cupy array
 
     Returns
     -------
@@ -426,6 +427,7 @@ def vsnr2d(
             norm=norm,
             cvg_threshold=cvg_threshold,
             return_cvg=return_cvg,
+            copy_to_host=copy_to_host,
         )
 
     elif algo == 'cuda':
