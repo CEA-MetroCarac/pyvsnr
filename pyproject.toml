@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pyvsnr"
-version = "2.3.2"
+version = "2.3.3"
 description = "VSNR (Variational Stationary Noise Remover) algorithm in python"
 authors = [
     { name = "Killian Pavy", email = "killian.pavy@cea.fr" },
